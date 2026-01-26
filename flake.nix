@@ -27,7 +27,15 @@
     ...
   }:
     flake-utils.lib.eachDefaultSystem (system: let
-      pkgs = nixpkgs.legacyPackages.${system};
+      pkgs = import nixpkgs {
+        inherit system;
+
+        config.allowUnfreePredicate = pkg:
+          builtins.elem (lib.getName pkg) [
+            "android-sdk-platform-tools"
+            "platform-tools"
+          ];
+      };
 
       inherit (pkgs) lib;
 
@@ -63,6 +71,7 @@
             pango
             webkitgtk_4_1
             openssl
+            cargo-tauri
           ]
           ++ (lib.optionals pkgs.stdenv.isDarwin (with pkgs; [
             libiconv
@@ -161,10 +170,6 @@
       devShells.default = craneLib.devShell {
         # Inherit inputs from checks.
         checks = self.checks.${system};
-
-        buildInputs = with pkgs; [
-          create-tauri-app
-        ];
 
         # Additional dev-shell environment variables can be set here directly.
         # MY_CUSTOM_DEVELOPMENT_VAR = "something else";
