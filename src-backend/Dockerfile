@@ -4,12 +4,15 @@ ARG RUST_VERSION=1.92.0
 ARG APP_NAME=src-backend
 
 # Create a stage for building the application.
-FROM rust:${RUST_VERSION}-alpine AS build
+FROM rust:${RUST_VERSION} AS build
 ARG APP_NAME
 WORKDIR /app
 
-# Install host build dependencies.
-RUN apk add --no-cache clang lld musl-dev git
+# # Install host build dependencies.
+# RUN apt-get update && \
+#     apt-get install -y build-essential
+# RUN apt-get clean && \
+#     rm -rf /var/lib/apt/lists/*
 
 # Build the application.
 # Leverage a cache mount to /usr/local/cargo/registry/
@@ -32,7 +35,11 @@ cp ./target/release/$APP_NAME /bin/server
 # runtime dependencies for the application. This often uses a different base
 # image from the build stage where the necessary files are copied from the
 # build stage.
-FROM alpine:3.18 AS final
+FROM debian:bookworm-slim AS final
+
+RUN apt-get update && \
+    apt-get install -y libpq-dev && \
+    rm -rf /var/lib/apt/lists/*
 
 # Create a non-privileged user that the app will run under.
 # See https://docs.docker.com/go/dockerfile-user-best-practices/
