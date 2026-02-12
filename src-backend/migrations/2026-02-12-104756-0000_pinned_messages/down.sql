@@ -1,1 +1,1 @@
-drop TABLE pinned_messages
+DROP TABLE pinned_messages;

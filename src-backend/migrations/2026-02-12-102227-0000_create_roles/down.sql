@@ -1,1 +1,1 @@
-drop TABLE roles
+DROP TABLE roles;

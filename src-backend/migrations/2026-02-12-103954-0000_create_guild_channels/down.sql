@@ -1,1 +1,1 @@
-drop TABLE guild_channels
+DROP TABLE guild_channels;

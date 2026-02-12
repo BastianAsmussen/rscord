@@ -1,1 +1,2 @@
-drop TABLE verification_codes
+DROP TABLE verification_codes;
+

@@ -1,1 +1,1 @@
-drop TABLE relationships
+DROP TABLE relationships;

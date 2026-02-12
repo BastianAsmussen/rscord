@@ -1,1 +1,1 @@
-DROP TABLE user_channels
+DROP TABLE user_channels;

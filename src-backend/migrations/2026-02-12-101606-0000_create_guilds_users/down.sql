@@ -1,1 +1,1 @@
-drop TABLE guilds_users
+DROP TABLE guilds_users;

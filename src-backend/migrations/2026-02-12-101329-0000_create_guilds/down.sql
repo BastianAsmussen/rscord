@@ -1,1 +1,1 @@
-drop TABLE guilds
+DROP TABLE guilds;

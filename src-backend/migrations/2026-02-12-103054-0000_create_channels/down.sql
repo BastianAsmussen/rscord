@@ -1,1 +1,1 @@
-drop TABLE channels
+DROP TABLE channels;
