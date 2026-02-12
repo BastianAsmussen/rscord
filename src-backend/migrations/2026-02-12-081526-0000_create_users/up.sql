@@ -9,7 +9,7 @@ CREATE TABLE users(
     password_digest VARCHAR(255) NOT NULL,
     user_handle VARCHAR(32) NOT NULL UNIQUE,
     display_name VARCHAR(32) NOT NULL,
-    status user_status NOT NULL DEFAULT 'offline',
+    status user_status NOT NULL DEFAULT 'online',
     icon_url VARCHAR(255)NULL,
     settings JSONB NOT NULL DEFAULT '{}',
     email_verified BOOLEAN NOT NULL DEFAULT FALSE,
