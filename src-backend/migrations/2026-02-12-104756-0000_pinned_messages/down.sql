@@ -1,0 +1,1 @@
+drop TABLE pinned_messages

@@ -1,0 +1,1 @@
+drop TABLE guilds_users

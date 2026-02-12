@@ -1,0 +1,1 @@
+drop TABLE guild_channels

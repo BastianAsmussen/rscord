@@ -1,0 +1,11 @@
+CREATE TABLE roles
+(
+    id          SERIAL      PRIMARY KEY,
+    guild_id    BIGINT      NOT NULL references guilds (id),
+    priority    INTEGER     NOT NULL DEFAULT 0,
+    name        VARCHAR(32) NOT NULL,
+    color       BIGINT      NOT NULL,
+    permissions SMALLINT    NOT NULL DEFAULT 0,
+    created_at  TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL
+);
