@@ -2,5 +2,7 @@ CREATE TABLE verification_codes(
     id SERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL REFERENCES users(id),
     code INTEGER NOT NULL,
-    expires_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT (NOW() + INTERVAL '15 minutes')
+    expires_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT (NOW() + INTERVAL '15 minutes'),
+
+    CONSTRAINT fk_user FOREIGN KEY(user_id) REFERENCES users(id)
 );
