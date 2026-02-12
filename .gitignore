@@ -1,6 +1,7 @@
 result*
 target/
 src-backend/db/
+src-backend/.env
 
 node_modules
 dist
