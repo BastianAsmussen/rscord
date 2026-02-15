@@ -1,0 +1,26 @@
+name: test-backend
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-backend -> target'
+
+      - name: build
+        run: cargo build --release
+        working-directory: src-backend/
+      - name: run tests
+        run: cargo test --release
+        working-directory: src-backend/
