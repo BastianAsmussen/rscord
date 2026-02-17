@@ -7,9 +7,9 @@
     --color-flamingo: #f2cdcd;
     --color-pink: #f5c2e7;
     --color-mauve: #cba6f7;
-    --color-red: #f38ba8;
+    --color-primary: #f38ba8;   /* Primary Color */
     --color-maroon: #eba0ac;
-    --color-peach: #fab387;
+    --color-secondary: #fab387; /* Secondary Color */
     --color-yellow: #f9e2af;
     --color-green: #a6e3a1;
     --color-teal: #94e2d5;
