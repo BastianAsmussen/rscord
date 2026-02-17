@@ -1,7 +1,9 @@
-CREATE TYPE user_status AS ENUM('online',
-'dnd',
-'idle',
-'offline');
+CREATE TYPE user_status AS ENUM(
+    'online',
+    'dnd',
+    'idle',
+    'offline'
+);
 
 CREATE TABLE users(
     id BIGSERIAL PRIMARY KEY,
@@ -13,7 +15,6 @@ CREATE TABLE users(
     icon_url VARCHAR(255)NULL,
     settings JSONB NOT NULL DEFAULT '{}',
     email_verified BOOLEAN NOT NULL DEFAULT FALSE,
-
     created_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT NOW()
 );
