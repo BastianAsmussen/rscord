@@ -1,40 +1,32 @@
-import { createSignal } from "solid-js";
-import logo from "./assets/logo.svg";
-import { invoke } from "@tauri-apps/api/core";
-import "./App.css";
+import { Route } from "@solidjs/router";
+import AuthGuard from "./auth/AuthGuard.jsx";
 
-function App() {
-  const [greetMsg, setGreetMsg] = createSignal("");
-  const [name, setName] = createSignal("");
+import Home from "./pages/Home";
+import SignIn from "./pages/SignIn";
+import Settings from "./pages/Settings";
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name: name() }));
-  }
+export default function App() {
+    return (
+        <>
+            <Route path="/signin" component={SignIn} />
 
-  return (
-    <main class="container">
-      <h1 class="bg-red-700">Welcome to Tauri + Solid</h1>
-        
-      <p>Click on the Tauri, Vite, and Solid logos to learn more.</p>
+            <Route
+                path="/"
+                component={() => (
+                    <AuthGuard>
+                        <Home />
+                    </AuthGuard>
+                )}
+            />
 
-      <form
-        class="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
-        />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg()}</p>
-    </main>
-  );
+            <Route
+                path="/settings"
+                component={() => (
+                    <AuthGuard>
+                        <Settings />
+                    </AuthGuard>
+                )}
+            />
+        </>
+    );
 }
-
-export default App;
