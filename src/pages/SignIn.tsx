@@ -8,7 +8,7 @@
 
     return (
         <div>
-            <h1>Sign In</h1>
+            <h1>Side - Login</h1>
 
             <button onClick={login}>Login</button>
         </div>

@@ -3,10 +3,10 @@
 export default function Settings() {
     return (
         <div>
-            <h1>Settings Page</h1>
+            <h1>Side - Indstillinger</h1>
 
             <nav>
-                <A href="/">Back to Home</A>
+                <A href="/">Gå til Forsiden</A>
             </nav>
         </div>
     );

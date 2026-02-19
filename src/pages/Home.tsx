@@ -8,13 +8,13 @@ export default function Home() {
 
     return (
         <div>
-            <h1>Home Page</h1>
+            <h1>Forsiden</h1>
 
             <nav>
-                <A href="/settings">Go to Settings</A>
+                <A href="/settings">Gå til Indstillinger</A>
             </nav>
 
-            <button onClick={logout}>Logout</button>
+            <button onClick={logout}>Log ud</button>
         </div>
     );
 }
