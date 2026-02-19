@@ -47,6 +47,19 @@ diesel::table! {
 }
 
 diesel::table! {
+    displayed_users (id) {
+        id -> Int8,
+        user_id -> Nullable<Int8>,
+        #[max_length = 32]
+        display_name -> Varchar,
+        #[max_length = 255]
+        icon_url -> Nullable<Varchar>,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
+    }
+}
+
+diesel::table! {
     guild_members (guild_id, user_id) {
         guild_id -> Int8,
         user_id -> Int8,
@@ -159,11 +172,7 @@ diesel::table! {
         password_digest -> Varchar,
         #[max_length = 32]
         user_handle -> Varchar,
-        #[max_length = 32]
-        display_name -> Varchar,
         status -> UserStatus,
-        #[max_length = 255]
-        icon_url -> Nullable<Varchar>,
         settings -> Jsonb,
         email_verified -> Bool,
         created_at -> Timestamp,
@@ -182,17 +191,18 @@ diesel::table! {
 
 diesel::joinable!(channels -> guilds (guild_id));
 diesel::joinable!(direct_messages -> channels (channel_id));
-diesel::joinable!(direct_messages -> users (author_id));
+diesel::joinable!(direct_messages -> displayed_users (author_id));
+diesel::joinable!(displayed_users -> users (user_id));
 diesel::joinable!(guild_members -> guilds (guild_id));
 diesel::joinable!(guild_members -> users (user_id));
 diesel::joinable!(guild_messages -> channels (channel_id));
-diesel::joinable!(guild_messages -> users (author_id));
+diesel::joinable!(guild_messages -> displayed_users (author_id));
 diesel::joinable!(members_roles -> guilds (guild_id));
 diesel::joinable!(members_roles -> roles (role_id));
 diesel::joinable!(members_roles -> users (user_id));
 diesel::joinable!(pinned_direct_messages -> channels (channel_id));
 diesel::joinable!(pinned_direct_messages -> direct_messages (message_id));
-diesel::joinable!(pinned_direct_messages -> users (pinned_by));
+diesel::joinable!(pinned_direct_messages -> displayed_users (pinned_by));
 diesel::joinable!(pinned_guild_messages -> channels (channel_id));
 diesel::joinable!(pinned_guild_messages -> guild_messages (message_id));
 diesel::joinable!(pinned_guild_messages -> users (pinned_by));
@@ -202,6 +212,7 @@ diesel::joinable!(sessions -> users (user_id));
 diesel::allow_tables_to_appear_in_same_query!(
     channels,
     direct_messages,
+    displayed_users,
     guild_members,
     guild_messages,
     guilds,
