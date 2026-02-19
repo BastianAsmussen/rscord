@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1054697389164",
+    "project_id": "rscord-c2cc1",
+    "storage_bucket": "rscord-c2cc1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1054697389164:android:465a3297584d2308ec6c49",
+        "android_client_info": {
+          "package_name": "tech.asmussen.rscord"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAJQryfyLI1zciapEL8BxHI3n3I3OhX1zI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
