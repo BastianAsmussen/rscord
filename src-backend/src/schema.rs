@@ -47,6 +47,9 @@ diesel::table! {
 }
 
 diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::UserStatus;
+
     displayed_users (id) {
         id -> Int8,
         user_id -> Nullable<Int8>,
@@ -54,6 +57,7 @@ diesel::table! {
         display_name -> Varchar,
         #[max_length = 255]
         icon_url -> Nullable<Varchar>,
+        status -> UserStatus,
         created_at -> Timestamp,
         updated_at -> Timestamp,
     }
@@ -161,9 +165,6 @@ diesel::table! {
 }
 
 diesel::table! {
-    use diesel::sql_types::*;
-    use super::sql_types::UserStatus;
-
     users (id) {
         id -> Int8,
         #[max_length = 320]
@@ -172,7 +173,6 @@ diesel::table! {
         password_digest -> Varchar,
         #[max_length = 32]
         user_handle -> Varchar,
-        status -> UserStatus,
         settings -> Jsonb,
         email_verified -> Bool,
         created_at -> Timestamp,
