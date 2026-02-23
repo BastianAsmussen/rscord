@@ -28,6 +28,7 @@ diesel::table! {
         #[max_length = 1024]
         topic -> Nullable<Varchar>,
         position -> Nullable<Int4>,
+        permission -> Nullable<Int4>,
         created_at -> Timestamp,
         updated_at -> Timestamp,
     }
