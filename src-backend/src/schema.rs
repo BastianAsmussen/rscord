@@ -15,6 +15,15 @@ pub mod sql_types {
 }
 
 diesel::table! {
+    channel_members (channel_id, user_id) {
+        channel_id -> Int8,
+        user_id -> Int8,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
+    }
+}
+
+diesel::table! {
     use diesel::sql_types::*;
     use super::sql_types::ChannelType;
 
@@ -190,6 +199,8 @@ diesel::table! {
     }
 }
 
+diesel::joinable!(channel_members -> channels (channel_id));
+diesel::joinable!(channel_members -> users (user_id));
 diesel::joinable!(channels -> guilds (guild_id));
 diesel::joinable!(direct_messages -> channels (channel_id));
 diesel::joinable!(direct_messages -> displayed_users (author_id));
@@ -211,6 +222,7 @@ diesel::joinable!(roles -> guilds (guild_id));
 diesel::joinable!(sessions -> users (user_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
+    channel_members,
     channels,
     direct_messages,
     displayed_users,
