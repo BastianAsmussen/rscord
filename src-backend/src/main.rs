@@ -3,6 +3,9 @@ use axum::Router;
 use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
 use src_backend::api::users;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use rustls::crypto;
+use rustls::crypto::CryptoProvider;
+use src_backend::fcm;
 
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations/");
 
@@ -41,6 +44,12 @@ async fn main() -> Result<()> {
 
         tracing::info!("Database migrations applied successfully.");
     }
+
+    // install our TLS cryptographic library used for API calls to fcm
+    CryptoProvider::install_default(crypto::aws_lc_rs::default_provider());
+
+    //Should be deleted before PR if not please flame me
+    fcm::send_push_notification().await;
 
     let app = Router::new().merge(users::routes()).with_state(pool);
 
