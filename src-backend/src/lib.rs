@@ -1,16 +1,38 @@
-use diesel::prelude::*;
-use dotenvy::dotenv;
-use std::env;
+use axum::{Json, extract::State, http::StatusCode};
+use diesel::{RunQueryDsl, SelectableHelper, associations::HasTable};
 
-pub mod models;
-pub mod schema;
+use crate::db::{
+    models::users::{NewUser, User},
+    schema::users::dsl::users,
+};
+
+pub mod db;
 pub mod fcm;
 
-pub fn establish_connection() -> PgConnection {
-    dotenv().ok();
+pub async fn create_user(
+    State(pool): State<deadpool_diesel::postgres::Pool>,
+    Json(payload): Json<NewUser>,
+) -> Result<Json<User>, (StatusCode, String)> {
+    let conn = pool.get().await.map_err(internal_error)?;
 
-    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    let res: User = conn
+        .interact(|conn| {
+            diesel::insert_into(users::table())
+                .values(payload)
+                .returning(User::as_returning())
+                .get_result(conn)
+        })
+        .await
+        .map_err(internal_error)? // Handles deadpool interact error
+        .map_err(internal_error)?; // Handles diesel query error
 
-    PgConnection::establish(&database_url)
-        .unwrap_or_else(|_| panic!("Error connecting to {}", database_url))
+    Ok(Json(res))
+}
+
+/// Utility function for mapping any error into a `500 Internal Server Error`.
+fn internal_error<E>(err: E) -> (StatusCode, String)
+where
+    E: std::error::Error,
+{
+    (StatusCode::INTERNAL_SERVER_ERROR, err.to_string())
 }
