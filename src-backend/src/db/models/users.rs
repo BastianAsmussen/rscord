@@ -30,3 +30,14 @@ pub struct NewUser {
     pub settings: serde_json::Value,
     pub email_verified: bool,
 }
+
+#[derive(Debug, Deserialize, AsChangeset)]
+#[diesel(table_name = crate::db::schema::users)]
+pub struct UpdateUser {
+    pub email: Option<String>,
+    pub password_digest: Option<String>,
+    #[diesel(column_name = user_handle)]
+    pub handle: Option<String>,
+    pub settings: Option<serde_json::Value>,
+    pub email_verified: Option<bool>,
+}
