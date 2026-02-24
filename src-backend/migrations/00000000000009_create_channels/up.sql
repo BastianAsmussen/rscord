@@ -14,6 +14,7 @@ CREATE TABLE channels(
     name VARCHAR(64) NULL,
     topic VARCHAR(1024) NULL,
     position INTEGER NULL,
+    permission INTEGER NULL,
 
     created_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
