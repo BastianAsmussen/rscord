@@ -135,6 +135,15 @@ diesel::table! {
 }
 
 diesel::table! {
+    push_tokens (id) {
+        id -> Int8,
+        user_id -> Int8,
+        #[max_length = 142]
+        token -> Nullable<Bpchar>,
+    }
+}
+
+diesel::table! {
     use diesel::sql_types::*;
     use super::sql_types::RelationshipStatus;
 
@@ -218,6 +227,7 @@ diesel::joinable!(pinned_direct_messages -> displayed_users (pinned_by));
 diesel::joinable!(pinned_guild_messages -> channels (channel_id));
 diesel::joinable!(pinned_guild_messages -> guild_messages (message_id));
 diesel::joinable!(pinned_guild_messages -> users (pinned_by));
+diesel::joinable!(push_tokens -> users (user_id));
 diesel::joinable!(roles -> guilds (guild_id));
 diesel::joinable!(sessions -> users (user_id));
 
@@ -232,6 +242,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     members_roles,
     pinned_direct_messages,
     pinned_guild_messages,
+    push_tokens,
     relationships,
     roles,
     sessions,
