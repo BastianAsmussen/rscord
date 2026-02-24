@@ -26,7 +26,7 @@
               rustPlatform.bindgenHook
             ];
 
-            buildInputs = [];
+            buildInputs = with pkgs; [postgresql_18.lib];
 
             RUSTC_VERSION = overrides.toolchain.channel;
             shellHook = ''

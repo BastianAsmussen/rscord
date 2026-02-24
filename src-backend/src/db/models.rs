@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 #[diesel(table_name = crate::db::schema::users)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct User {
-    pub id: i64,
+    id: i64,
 
     email: String,
     password_digest: String,
@@ -18,4 +18,15 @@ pub struct User {
 
     created_at: NaiveDateTime,
     updated_at: NaiveDateTime,
+}
+
+#[derive(Debug, Deserialize, Insertable)]
+#[diesel(table_name = crate::db::schema::users)]
+pub struct NewUser {
+    pub email: String,
+    pub password_digest: String,
+    #[diesel(column_name = user_handle)]
+    pub handle: String,
+    pub settings: serde_json::Value,
+    pub email_verified: bool,
 }
