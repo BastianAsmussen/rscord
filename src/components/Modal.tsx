@@ -17,7 +17,7 @@ export function Modal(props: ModalProps) {
                     mount={mount}
                     children={
                         <div
-                            class="fixed inset-0 bg-black/50 flex items-center justify-center"
+                            class="fixed inset-0 backdrop flex items-center justify-center"
                             onClick={props.onClose}
                         >
                             <div
