@@ -139,7 +139,7 @@ diesel::table! {
         id -> Int8,
         user_id -> Int8,
         #[max_length = 142]
-        token -> Nullable<Bpchar>,
+        token -> Bpchar,
     }
 }
 

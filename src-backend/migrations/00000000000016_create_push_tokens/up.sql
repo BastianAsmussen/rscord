@@ -1,7 +1,7 @@
 CREATE TABLE push_tokens(
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL,
-    token char(142),
+    token char(142) not null,
 
     CONSTRAINT fk_user FOREIGN KEY(user_id) REFERENCES users(id),
     CONSTRAINT unique_token UNIQUE(token)
