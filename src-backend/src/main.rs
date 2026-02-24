@@ -1,7 +1,17 @@
 use axum::{Router, routing::get};
+use src_backend::{establish_connection, fcm};
+use rustls::crypto;
+use rustls::crypto::CryptoProvider;
 
 #[tokio::main]
 async fn main() {
+    // install our TLS cryptographic library used for API calls to fcm
+    CryptoProvider::install_default(crypto::aws_lc_rs::default_provider());
+
+    //Should be deleted before PR if not please flame me
+    fcm::send_push_notification().await;
+
+    establish_connection();
     // build our application with a single route
     let app = Router::new().route("/", get(|| async { "Hello, World!" }));
 
