@@ -2,7 +2,7 @@ use axum::{Json, extract::State, http::StatusCode};
 use diesel::{RunQueryDsl, SelectableHelper, associations::HasTable};
 
 use crate::db::{
-    models::{NewUser, User},
+    models::users::{NewUser, User},
     schema::users::dsl::users,
 };
 
