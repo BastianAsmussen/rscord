@@ -1,7 +1,7 @@
 use anyhow::{Context, Result, anyhow};
 use axum::Router;
 use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
-use src_backend::api::users;
+use src_backend::api::{push_tokens, users};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use rustls::crypto;
 use rustls::crypto::CryptoProvider;
@@ -46,12 +46,14 @@ async fn main() -> Result<()> {
     }
 
     // install our TLS cryptographic library used for API calls to fcm
-    CryptoProvider::install_default(crypto::aws_lc_rs::default_provider());
+    // CryptoProvider::install_default(crypto::aws_lc_rs::default_provider());
 
     //Should be deleted before PR if not please flame me
-    fcm::send_push_notification().await;
+    // fcm::send_push_notification().await;
 
-    let app = Router::new().merge(users::routes()).with_state(pool);
+    let app = Router::new()
+        .merge(users::routes()).with_state(pool.clone())
+        .merge(push_tokens::routes().with_state(pool));
 
     let bind_addr = "0.0.0.0:8080";
     let listener = tokio::net::TcpListener::bind(bind_addr)
