@@ -1,11 +1,11 @@
 use anyhow::{Context, Result, anyhow};
 use axum::Router;
 use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
-use src_backend::api::{push_tokens, users};
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use rustls::crypto;
 use rustls::crypto::CryptoProvider;
+use src_backend::api::{push_tokens, users};
 use src_backend::fcm;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations/");
 
@@ -52,8 +52,9 @@ async fn main() -> Result<()> {
     // fcm::send_push_notification().await;
 
     let app = Router::new()
-        .merge(users::routes()).with_state(pool.clone())
-        .merge(push_tokens::routes().with_state(pool));
+        .merge(users::routes())
+        .merge(push_tokens::routes())
+        .with_state(pool);
 
     let bind_addr = "0.0.0.0:8080";
     let listener = tokio::net::TcpListener::bind(bind_addr)
