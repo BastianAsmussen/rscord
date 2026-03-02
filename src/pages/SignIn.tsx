@@ -1,4 +1,5 @@
 ﻿import { createSignal } from "solid-js";
+import CreateUser from "../components/CreateUser";
 
 export default function SignIn() {
     const [username, setUsername] = createSignal("");
