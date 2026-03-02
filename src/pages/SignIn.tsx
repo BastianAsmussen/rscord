@@ -83,6 +83,10 @@ export default function SignIn() {
                     </button>
                 </form>
 
+                <div class="mt-10 text-center text-[#cdd6f4]">
+                    If you don’t have a user,&nbsp;
+                    <CreateUser />
+                </div>
             </div>
         </div>
     );
