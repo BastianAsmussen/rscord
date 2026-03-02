@@ -64,7 +64,25 @@ export default function SignIn() {
                             focus:outline-none
                         "
                         required
-                    /></form>
+                    />
+
+                    <button
+                        type="submit"
+                        class="
+                            w-full
+                            py-3
+                            bg-[#f38ba8]
+                            text-black
+                            font-semibold
+                            rounded-2xl
+                            hover:opacity-90
+                            transition
+                        "
+                    >
+                        Login
+                    </button>
+                </form>
+
             </div>
         </div>
     );
