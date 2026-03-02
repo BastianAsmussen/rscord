@@ -1,16 +1,11 @@
-﻿export default function SignIn() {
+﻿import { createSignal } from "solid-js";
 
-    // TODO: Implement real login logic
-    const login = () => {
-        localStorage.setItem("session", "logged-in");
-        window.location.href = "/";
+export default function SignIn() {
+    const [username, setUsername] = createSignal("");
+    const [password, setPassword] = createSignal("");
+
+    const login = (e: Event) => {
+        e.preventDefault();
+        console.log("Login:", username(), password());
     };
-
-    return (
-        <div>
-            <h1>Side - Login</h1>
-
-            <button onClick={login}>Login</button>
-        </div>
-    );
 }
