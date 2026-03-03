@@ -8,7 +8,7 @@ use axum::routing::delete;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper, associations::HasTable};
 use super::errors::ApiError;
 use crate::db::{
-    models::fcm_token::NewPushToken,
+    models::push_tokens::NewPushToken,
     schema::push_tokens
 };
 

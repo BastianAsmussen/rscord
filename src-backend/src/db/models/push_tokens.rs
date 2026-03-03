@@ -11,6 +11,15 @@ pub struct PushToken{
     token: String
 }
 
+impl PushToken {
+    pub fn user_id(&self) -> &i64 {
+        &self.user_id
+    }
+    pub fn token(&self) -> &str {
+        &self.token
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Insertable)]
 #[diesel(table_name = crate::db::schema::push_tokens)]
 pub struct NewPushToken{

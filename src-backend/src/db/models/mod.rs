@@ -1,2 +1,2 @@
 pub mod users;
-pub mod fcm_token;
+pub mod push_tokens;
