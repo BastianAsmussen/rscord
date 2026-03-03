@@ -7,6 +7,6 @@ CREATE TABLE channel_members(
 
     PRIMARY KEY(channel_id, user_id),
 
-    CONSTRAINT fk_channel FOREIGN KEY(channel_id) REFERENCES channels(id),
-    CONSTRAINT fk_user FOREIGN KEY(user_id) REFERENCES users(id)
+    CONSTRAINT fk_channel FOREIGN KEY(channel_id) REFERENCES channels(id) ON DELETE CASCADE,
+    CONSTRAINT fk_user FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
 );

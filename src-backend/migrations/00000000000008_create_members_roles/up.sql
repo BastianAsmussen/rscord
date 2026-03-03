@@ -6,10 +6,10 @@ CREATE TABLE members_roles(
 
     PRIMARY KEY (guild_id, user_id, role_id),
 
-    CONSTRAINT fk_guild FOREIGN KEY (guild_id) REFERENCES guilds(id),
-    CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users(id),
-    CONSTRAINT fk_role FOREIGN KEY (role_id) REFERENCES roles(id),
-    CONSTRAINT fk_member FOREIGN KEY (guild_id, user_id) REFERENCES guild_members(guild_id, user_id)
+    CONSTRAINT fk_guild FOREIGN KEY (guild_id) REFERENCES guilds(id) ON DELETE CASCADE,
+    CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_role FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
+    CONSTRAINT fk_member FOREIGN KEY (guild_id, user_id) REFERENCES guild_members(guild_id, user_id) ON DELETE CASCADE
 );
 
 -- "What roles does user X have across all guilds?"

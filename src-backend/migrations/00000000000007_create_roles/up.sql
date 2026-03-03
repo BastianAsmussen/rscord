@@ -9,7 +9,8 @@ CREATE TABLE roles(
     created_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
 
-    CONSTRAINT fk_guild FOREIGN KEY (guild_id) REFERENCES guilds(id),
+    CONSTRAINT fk_guild FOREIGN KEY (guild_id) REFERENCES guilds(id) ON DELETE CASCADE,
+
     CONSTRAINT unique_role_name_per_guild UNIQUE (guild_id, name),
     CONSTRAINT unique_priority_per_guild UNIQUE (guild_id, priority)
 );
