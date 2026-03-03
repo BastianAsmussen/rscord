@@ -19,7 +19,7 @@ CREATE TABLE channels(
     created_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
 
-    CONSTRAINT fk_guild FOREIGN KEY (guild_id) REFERENCES guilds(id),
+    CONSTRAINT fk_guild FOREIGN KEY (guild_id) REFERENCES guilds(id) ON DELETE CASCADE,
 
     -- Guild channels MUST have a guild_id and name, DMs must NOT.
     CONSTRAINT guild_channel_check CHECK (

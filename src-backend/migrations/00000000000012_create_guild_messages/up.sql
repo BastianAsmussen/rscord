@@ -10,5 +10,5 @@ CREATE TABLE guild_messages(
 
     CONSTRAINT fk_author FOREIGN KEY (author_id) REFERENCES displayed_users(id),
     CONSTRAINT fk_reply_to FOREIGN KEY (reply_to_id) REFERENCES guild_messages(id),
-    CONSTRAINT fk_channel FOREIGN KEY (channel_id) REFERENCES channels(id)
+    CONSTRAINT fk_channel FOREIGN KEY (channel_id) REFERENCES channels(id) ON DELETE CASCADE
 );

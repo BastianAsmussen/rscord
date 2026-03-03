@@ -4,5 +4,5 @@ CREATE TABLE verification_codes(
     code INTEGER NOT NULL,
     expires_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT (NOW() + INTERVAL '15 minutes'),
 
-    CONSTRAINT fk_user FOREIGN KEY(user_id) REFERENCES users(id)
+    CONSTRAINT fk_user FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
 );
