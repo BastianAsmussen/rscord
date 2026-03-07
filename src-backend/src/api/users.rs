@@ -6,15 +6,17 @@ use axum::{
 };
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper, associations::HasTable};
 
-use super::errors::ApiError;
-use crate::db::{
-    models::users::{NewUser, UpdateUser, User},
-    schema::users as users_schema,
+use super::{auth_extractor::AuthUser, errors::ApiError};
+use crate::{
+    api::errors::ErrorBody,
+    db::{
+        models::users::{NewUser, UpdateUser, User},
+        schema::users as users_schema,
+    },
 };
 
 type Pool = deadpool_diesel::postgres::Pool;
 
-/// Returns the `/api/users` router with all user CRUD routes.
 pub fn routes() -> Router<Pool> {
     Router::new()
         .route("/api/users", post(create_user).get(list_users))
@@ -24,10 +26,27 @@ pub fn routes() -> Router<Pool> {
         )
 }
 
-/// POST /api/users
+/// Create a new user (admin functionality).
 ///
-/// Create a new user.
-async fn create_user(
+/// # Errors
+///
+/// This function may return the following errors:
+/// - `ApiError::Conflict`: If the provided user data violates database constraints.
+/// - `ApiError::Internal`: If an error occurs during the database operation.
+#[utoipa::path(
+    post,
+    path = "/api/users",
+    request_body = NewUser,
+    responses(
+        (status = 201, description = "User created", body = User),
+        (status = 401, description = "Not authenticated", body = ErrorBody),
+        (status = 409, description = "Conflict", body = ErrorBody),
+    ),
+    security(("session_token" = [])),
+    tag = "users"
+)]
+pub async fn create_user(
+    _auth: AuthUser,
     State(pool): State<Pool>,
     Json(payload): Json<NewUser>,
 ) -> Result<(StatusCode, Json<User>), ApiError> {
@@ -45,10 +64,26 @@ async fn create_user(
     Ok((StatusCode::CREATED, Json(user)))
 }
 
-/// GET /api/users
+/// Retrieves a list of all users.
 ///
-/// List all users.
-async fn list_users(State(pool): State<Pool>) -> Result<Json<Vec<User>>, ApiError> {
+/// # Errors
+///
+/// This function may return the following errors:
+/// - `ApiError::Internal`: If an error occurs during the database query execution.
+#[utoipa::path(
+    get,
+    path = "/api/users",
+    responses(
+        (status = 200, description = "List of users", body = Vec<User>),
+        (status = 401, description = "Not authenticated", body = ErrorBody),
+    ),
+    security(("session_token" = [])),
+    tag = "users"
+)]
+pub async fn list_users(
+    _auth: AuthUser,
+    State(pool): State<Pool>,
+) -> Result<Json<Vec<User>>, ApiError> {
     let conn = pool.get().await?;
 
     let all_users: Vec<User> = conn
@@ -62,10 +97,27 @@ async fn list_users(State(pool): State<Pool>) -> Result<Json<Vec<User>>, ApiErro
     Ok(Json(all_users))
 }
 
-/// GET /api/users/:id
+/// Retrieves a user by their unique ID.
 ///
-/// Get a single user by ID.
-async fn get_user(
+/// # Errors
+///
+/// This function may return the following errors:
+/// - `ApiError::NotFound`: If the user with the given ID is not found in the database.
+/// - `ApiError::Internal`: If an error occurs during the database query execution.
+#[utoipa::path(
+    get,
+    path = "/api/users/{id}",
+    params(("id" = i64, Path, description = "User ID")),
+    responses(
+        (status = 200, description = "User found", body = User),
+        (status = 401, description = "Not authenticated", body = ErrorBody),
+        (status = 404, description = "User not found", body = ErrorBody),
+    ),
+    security(("session_token" = [])),
+    tag = "users"
+)]
+pub async fn get_user(
+    _auth: AuthUser,
     State(pool): State<Pool>,
     Path(user_id): Path<i64>,
 ) -> Result<Json<User>, ApiError> {
@@ -89,10 +141,29 @@ async fn get_user(
     Ok(Json(user))
 }
 
-/// PUT /api/users/:id
+/// Updates an existing user's data by their unique ID.
 ///
-/// Update an existing user.
-async fn update_user(
+/// # Errors
+///
+/// This function may return the following errors:
+/// - `ApiError::NotFound`: If no user exists with the given ID.
+/// - `ApiError::Internal`: If an error occurs during the update operation in the database.
+/// - `ApiError::Conflict`: If the updated data violates database constraints.
+#[utoipa::path(
+    put,
+    path = "/api/users/{id}",
+    params(("id" = i64, Path, description = "User ID")),
+    request_body = UpdateUser,
+    responses(
+        (status = 200, description = "User updated", body = User),
+        (status = 401, description = "Not authenticated", body = ErrorBody),
+        (status = 404, description = "User not found", body = ErrorBody),
+    ),
+    security(("session_token" = [])),
+    tag = "users"
+)]
+pub async fn update_user(
+    _auth: AuthUser,
     State(pool): State<Pool>,
     Path(user_id): Path<i64>,
     Json(payload): Json<UpdateUser>,
@@ -117,10 +188,27 @@ async fn update_user(
     Ok(Json(user))
 }
 
-/// DELETE /api/users/:id
+/// Deletes a user by their unique ID.
 ///
-/// Delete a user by ID.
-async fn delete_user(
+/// # Errors
+///
+/// This function may return the following errors:
+/// - `ApiError::NotFound`: If the user with the given ID is not found.
+/// - `ApiError::Internal`: If an error occurs during the database operation.
+#[utoipa::path(
+    delete,
+    path = "/api/users/{id}",
+    params(("id" = i64, Path, description = "User ID")),
+    responses(
+        (status = 204, description = "User deleted"),
+        (status = 401, description = "Not authenticated", body = ErrorBody),
+        (status = 404, description = "User not found", body = ErrorBody),
+    ),
+    security(("session_token" = [])),
+    tag = "users"
+)]
+pub async fn delete_user(
+    _auth: AuthUser,
     State(pool): State<Pool>,
     Path(user_id): Path<i64>,
 ) -> Result<StatusCode, ApiError> {

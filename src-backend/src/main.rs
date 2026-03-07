@@ -1,10 +1,60 @@
 use anyhow::{Context, Result, anyhow};
 use axum::Router;
 use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
-use src_backend::api::users;
+use src_backend::api::{auth, users};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations/");
+
+#[derive(OpenApi)]
+#[openapi(
+    paths(
+        auth::register,
+        auth::login,
+        auth::logout,
+
+        users::create_user,
+        users::list_users,
+        users::get_user,
+        users::update_user,
+        users::delete_user,
+    ),
+    components(schemas(
+        src_backend::db::models::users::User,
+        src_backend::db::models::users::NewUser,
+        src_backend::db::models::users::UpdateUser,
+        src_backend::db::models::sessions::Session,
+        src_backend::api::errors::ErrorBody,
+        auth::RegisterRequest,
+        auth::LoginRequest,
+        auth::AuthResponse,
+    )),
+    modifiers(&SecurityAddon),
+    tags(
+        (name = "auth", description = "Authentication endpoints"),
+        (name = "users", description = "User endpoints"),
+    )
+)]
+struct ApiDoc;
+
+struct SecurityAddon;
+
+impl utoipa::Modify for SecurityAddon {
+    fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
+        if let Some(components) = openapi.components.as_mut() {
+            components.add_security_scheme(
+                "session_token",
+                utoipa::openapi::security::SecurityScheme::ApiKey(
+                    utoipa::openapi::security::ApiKey::Cookie(
+                        utoipa::openapi::security::ApiKeyValue::new("session_token"),
+                    ),
+                ),
+            );
+        }
+    }
+}
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -26,8 +76,6 @@ async fn main() -> Result<()> {
         .build()
         .context("Failed to build database connection pool!")?;
 
-    // Verify that the pool can actually hand out a connection before we
-    // accept traffic - fail fast instead of serving 500s.
     {
         let conn = pool
             .get()
@@ -42,7 +90,11 @@ async fn main() -> Result<()> {
         tracing::info!("Database migrations applied successfully.");
     }
 
-    let app = Router::new().merge(users::routes()).with_state(pool);
+    let app = Router::new()
+        .merge(auth::routes())
+        .merge(users::routes())
+        .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
+        .with_state(pool);
 
     let bind_addr = "0.0.0.0:8080";
     let listener = tokio::net::TcpListener::bind(bind_addr)
@@ -50,6 +102,7 @@ async fn main() -> Result<()> {
         .with_context(|| format!("Failed to bind to {bind_addr}!"))?;
 
     tracing::info!("Listening on {bind_addr}...");
+    tracing::info!("Swagger UI available at http://{bind_addr}/swagger-ui/");
 
     axum::serve(listener, app)
         .with_graceful_shutdown(shutdown_signal())
@@ -61,7 +114,6 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-/// Waits for a CTRL+C (SIGINT) signal to trigger a graceful shutdown.
 async fn shutdown_signal() {
     tokio::signal::ctrl_c()
         .await
