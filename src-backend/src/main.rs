@@ -1,7 +1,7 @@
 use anyhow::{Context, Result, anyhow};
 use axum::Router;
 use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
-use src_backend::api::{auth, users};
+use src_backend::api::{auth, opaque::AppState, users};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -11,8 +11,10 @@ pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations/");
 #[derive(OpenApi)]
 #[openapi(
     paths(
-        auth::register,
-        auth::login,
+        auth::register_start,
+        auth::register_finish,
+        auth::login_start,
+        auth::login_finish,
         auth::logout,
 
         users::create_user,
@@ -27,9 +29,13 @@ pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations/");
         src_backend::db::models::users::UpdateUser,
         src_backend::db::models::sessions::Session,
         src_backend::api::errors::ErrorBody,
-        auth::RegisterRequest,
-        auth::LoginRequest,
         auth::AuthResponse,
+        auth::OpaqueRegisterStartRequest,
+        auth::OpaqueRegisterStartResponse,
+        auth::OpaqueRegisterFinishRequest,
+        auth::OpaqueLoginStartRequest,
+        auth::OpaqueLoginStartResponse,
+        auth::OpaqueLoginFinishRequest,
     )),
     modifiers(&SecurityAddon),
     tags(
@@ -90,11 +96,14 @@ async fn main() -> Result<()> {
         tracing::info!("Database migrations applied successfully.");
     }
 
+    // Build AppState from the pool - this loads/generates the OPAQUE server keypair.
+    let state = AppState::new(pool);
+
     let app = Router::new()
         .merge(auth::routes())
         .merge(users::routes())
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
-        .with_state(pool);
+        .with_state(state);
 
     let bind_addr = "0.0.0.0:8080";
     let listener = tokio::net::TcpListener::bind(bind_addr)
@@ -107,7 +116,7 @@ async fn main() -> Result<()> {
     axum::serve(listener, app)
         .with_graceful_shutdown(shutdown_signal())
         .await
-        .context("Server exited with an error")?;
+        .context("Server exited with an error!")?;
 
     tracing::info!("Server shut down gracefully.");
 
