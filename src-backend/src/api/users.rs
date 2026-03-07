@@ -8,7 +8,7 @@ use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper, associa
 
 use super::{auth_extractor::AuthUser, errors::ApiError};
 use crate::{
-    api::errors::ErrorBody,
+    api::{errors::ErrorBody, opaque::AppState},
     db::{
         models::users::{NewUser, UpdateUser, User},
         schema::users as users_schema,
@@ -17,7 +17,7 @@ use crate::{
 
 type Pool = deadpool_diesel::postgres::Pool;
 
-pub fn routes() -> Router<Pool> {
+pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/api/users", post(create_user).get(list_users))
         .route(

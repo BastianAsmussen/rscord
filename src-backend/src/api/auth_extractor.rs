@@ -5,9 +5,10 @@ use chrono::Utc;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper};
 
 use super::errors::ApiError;
-use crate::db::{models::sessions::Session, schema::sessions as sessions_schema};
-
-type Pool = deadpool_diesel::postgres::Pool;
+use crate::{
+    api::opaque::AppState,
+    db::{models::sessions::Session, schema::sessions as sessions_schema},
+};
 
 /// Extracts the authenticated user's session from either:
 /// - a `session_token` cookie, or
@@ -17,17 +18,17 @@ pub struct AuthUser {
     pub session: Session,
 }
 
-impl FromRequestParts<Pool> for AuthUser {
+impl FromRequestParts<AppState> for AuthUser {
     type Rejection = ApiError;
 
-    async fn from_request_parts(parts: &mut Parts, pool: &Pool) -> Result<Self, Self::Rejection> {
-        // 1. Extract the token from cookie or header.
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &AppState,
+    ) -> Result<Self, Self::Rejection> {
         let token = extract_token(parts)?;
 
-        // 2. Get a DB connection directly from the pool state.
-        let conn = pool.get().await?;
+        let conn = state.pool.get().await?;
 
-        // 3. Look up the session.
         let token_clone = token.clone();
         let session: Session = conn
             .interact(move |conn| {
@@ -44,7 +45,6 @@ impl FromRequestParts<Pool> for AuthUser {
                 other => ApiError::internal(other),
             })?;
 
-        // 4. Check expiry.
         if session.expires_at < Utc::now().naive_utc() {
             return Err(ApiError::Unauthorized(
                 "Session has expired. Please log in again.".into(),

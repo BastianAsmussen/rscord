@@ -188,8 +188,7 @@ diesel::table! {
         id -> Int8,
         #[max_length = 320]
         email -> Varchar,
-        #[max_length = 255]
-        password_digest -> Varchar,
+        opaque_record -> Bytea,
         #[max_length = 32]
         user_handle -> Varchar,
         settings -> Jsonb,
