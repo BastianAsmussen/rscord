@@ -1,7 +1,7 @@
 CREATE TABLE users(
     id BIGSERIAL PRIMARY KEY,
     email VARCHAR(320) NOT NULL UNIQUE,
-    password_digest VARCHAR(255) NOT NULL,
+    opaque_record BYTEA NOT NULL,
     user_handle VARCHAR(32) NOT NULL UNIQUE,
     settings JSONB NOT NULL DEFAULT '{}',
     email_verified BOOLEAN NOT NULL DEFAULT FALSE,

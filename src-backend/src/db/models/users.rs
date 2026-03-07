@@ -12,7 +12,7 @@ pub struct User {
     pub email: String,
     #[serde(skip_serializing)]
     #[schema(ignore)]
-    pub password_digest: String,
+    pub opaque_record: Vec<u8>,
 
     #[diesel(column_name = user_handle)]
     pub handle: String,
@@ -28,7 +28,7 @@ pub struct User {
 #[diesel(table_name = crate::db::schema::users)]
 pub struct NewUser {
     pub email: String,
-    pub password_digest: String,
+    pub opaque_record: Vec<u8>,
 
     #[diesel(column_name = user_handle)]
     pub handle: String,
@@ -38,7 +38,7 @@ pub struct NewUser {
 #[diesel(table_name = crate::db::schema::users)]
 pub struct UpdateUser {
     pub email: Option<String>,
-    pub password_digest: Option<String>,
+    pub opaque_record: Option<Vec<u8>>,
 
     #[diesel(column_name = user_handle)]
     pub handle: Option<String>,
