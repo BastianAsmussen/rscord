@@ -24,6 +24,8 @@ pub struct ErrorBody {
 pub enum ApiError {
     /// 401 - missing or invalid credentials.
     Unauthorized(String),
+    /// 403 - the user is authenticated but does not have permission for this action.
+    Forbidden(String),
     /// 404 - the requested resource does not exist.
     NotFound(String),
     /// 409 - a uniqueness constraint was violated (duplicate email, handle, …).
@@ -45,6 +47,7 @@ impl std::fmt::Display for ApiError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Unauthorized(msg) => write!(f, "Unauthorized: {msg}"),
+            Self::Forbidden(msg) => write!(f, "Forbidden: {msg}"),
             Self::NotFound(msg) => write!(f, "Not found: {msg}"),
             Self::Conflict(msg) => write!(f, "Conflict: {msg}"),
             Self::UnprocessableEntity(msg) => write!(f, "Unprocessable entity: {msg}"),
@@ -57,6 +60,7 @@ impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
         let (status, error_code, message) = match &self {
             Self::Unauthorized(msg) => (StatusCode::UNAUTHORIZED, "unauthorized", msg.clone()),
+            Self::Forbidden(msg) => (StatusCode::FORBIDDEN, "forbidden", msg.clone()),
             Self::NotFound(msg) => (StatusCode::NOT_FOUND, "not_found", msg.clone()),
             Self::Conflict(msg) => (StatusCode::CONFLICT, "conflict", msg.clone()),
             Self::UnprocessableEntity(msg) => (
@@ -106,6 +110,9 @@ impl From<deadpool_diesel::PoolError> for ApiError {
 impl From<diesel::result::Error> for ApiError {
     fn from(err: diesel::result::Error) -> Self {
         match &err {
+            diesel::result::Error::RollbackTransaction => {
+                Self::Forbidden("Action forbidden by business logic.".into())
+            }
             diesel::result::Error::NotFound => {
                 Self::NotFound("The requested resource was not found.".into())
             }
