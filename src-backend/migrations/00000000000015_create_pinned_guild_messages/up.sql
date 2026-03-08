@@ -6,7 +6,7 @@ CREATE TABLE pinned_guild_messages(
 
     PRIMARY KEY (channel_id, message_id),
 
-    CONSTRAINT fk_channel FOREIGN KEY (channel_id) REFERENCES channels(id) ON DELETE CASCADE,
+    CONSTRAINT fk_channel FOREIGN KEY (channel_id) REFERENCES guild_channels(id) ON DELETE CASCADE,
     CONSTRAINT fk_message FOREIGN KEY (message_id) REFERENCES guild_messages(id) ON DELETE CASCADE,
     CONSTRAINT fk_pinned_by FOREIGN KEY (pinned_by) REFERENCES users(id)
 );
