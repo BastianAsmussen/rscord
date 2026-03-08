@@ -1,28 +1,30 @@
 ﻿use axum::{
-    extract::{Path, State},
-    http::StatusCode,
-    routing::{get, post, delete, put},
-    Json, Router,
+    extract::{Path, State}, http::StatusCode,
+    routing::{delete, post},
+    Json,
+    Router,
 };
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper, Connection};
 use diesel::prelude::*;
+use diesel::{Connection, ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper};
 
 use super::{auth_extractor::AuthUser, errors::ApiError};
-use crate::api::errors::ErrorBody;
 use crate::api::opaque::AppState;
-use crate::db::{
-    models::roles::{Role, NewRole, UpdateRole},
-    schema::{roles, guilds, guild_members},
-};
 use crate::db::models::guilds::Guild;
 use crate::db::models::roles::RoleSummary;
+use crate::db::{
+    models::roles::{NewRole, Role, UpdateRole},
+    schema::{guild_members, guilds, roles},
+};
 
 type Pool = deadpool_diesel::postgres::Pool;
 
 pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/api/guilds/{id}/roles", post(create_role).get(list_roles))
-        .route("/api/guilds/{id}/roles/{role_id}", delete(delete_role).put(update_role))
+        .route(
+            "/api/guilds/{id}/roles/{role_id}",
+            delete(delete_role).put(update_role),
+        )
 }
 
 /// Create a Role
@@ -55,26 +57,35 @@ pub async fn create_role(
     let conn = pool.get().await?;
     let user_id = auth.session.user_id;
 
-    let role = conn.interact(move |conn| {
-        conn.transaction::<Role, diesel::result::Error, _>(|inner_conn| {
-            let is_owner = guilds::table
-                .filter(guilds::id.eq(guild_id))
-                .filter(guilds::owner_id.eq(user_id))
-                .first::<Guild>(inner_conn)
-                .optional()?
-                .is_some();
+    let role = conn
+        .interact(move |conn| {
+            conn.transaction::<Role, ApiError, _>(|inner_conn| {
+                let guild: Option<Guild> = guilds::table
+                    .filter(guilds::id.eq(guild_id))
+                    .first::<Guild>(inner_conn)
+                    .optional()
+                    .map_err(ApiError::internal)?;
 
-            if !is_owner {
-                return Err(diesel::result::Error::NotFound);
-            }
+                let guild = guild.ok_or_else(|| {
+                    ApiError::NotFound(format!("Guild with ID {} does not exist", guild_id))
+                })?;
 
-            payload.guild_id = guild_id;
-            diesel::insert_into(roles::table)
-                .values(&payload)
-                .returning(Role::as_returning())
-                .get_result(inner_conn)
+                if guild.owner_id != user_id {
+                    return Err(ApiError::Forbidden(
+                        "Only the guild owner can create roles".into(),
+                    ));
+                }
+
+                payload.guild_id = guild_id;
+                diesel::insert_into(roles::table)
+                    .values(&payload)
+                    .returning(Role::as_returning())
+                    .get_result(inner_conn)
+                    .map_err(ApiError::internal)
+            })
         })
-    }).await?.map_err(|_| ApiError::NotFound("Only the owner can create roles or guild not found".into()))?;
+        .await?
+        .map_err(|e| e)?;
 
     Ok((StatusCode::CREATED, Json(role)))
 }
@@ -103,25 +114,27 @@ pub async fn list_roles(
     let conn = pool.get().await?;
     let user_id = auth.session.user_id;
 
-    let roles_list = conn.interact(move |conn| {
-        let is_member = guild_members::table
-            .filter(guild_members::guild_id.eq(guild_id))
-            .filter(guild_members::user_id.eq(user_id))
-            .count()
-            .get_result::<i64>(conn)? > 0;
+    let roles_list = conn
+        .interact(move |conn| {
+            let is_member = guild_members::table
+                .filter(guild_members::guild_id.eq(guild_id))
+                .filter(guild_members::user_id.eq(user_id))
+                .count()
+                .get_result::<i64>(conn)?
+                > 0;
 
-        if !is_member {
-            return Err(diesel::result::Error::NotFound);
-        }
+            if !is_member {
+                return Err(diesel::result::Error::NotFound);
+            }
 
-        roles::table
-            .filter(roles::guild_id.eq(guild_id))
-            .order(roles::priority.desc())
-            .select(RoleSummary::as_select())
-            .load::<RoleSummary>(conn)
-    })
+            roles::table
+                .filter(roles::guild_id.eq(guild_id))
+                .order(roles::priority.desc())
+                .select(RoleSummary::as_select())
+                .load::<RoleSummary>(conn)
+        })
         .await?
-        .map_err(|_| ApiError::NotFound("Not a member of this guild".into()))?;
+        .map_err(|_| ApiError::Unauthorized("Not a member of this guild".into()))?;
 
     Ok(Json(roles_list))
 }
@@ -155,23 +168,41 @@ pub async fn update_role(
     let conn = pool.get().await?;
     let user_id = auth.session.user_id;
 
-    let updated_role = conn.interact(move |conn| {
-        conn.transaction::<Role, diesel::result::Error, _>(|inner_conn| {
-            let is_owner = guilds::table
-                .filter(guilds::id.eq(guild_id))
-                .filter(guilds::owner_id.eq(user_id))
-                .execute(inner_conn)? > 0;
+    let updated_role = conn
+        .interact(move |conn| {
+            conn.transaction::<Role, ApiError, _>(|inner_conn| {
+                let is_owner = guilds::table
+                    .filter(guilds::id.eq(guild_id))
+                    .filter(guilds::owner_id.eq(user_id))
+                    .count()
+                    .get_result::<i64>(inner_conn)
+                    .map_err(ApiError::internal)?
+                    > 0;
 
-            if !is_owner {
-                return Err(diesel::result::Error::NotFound);
-            }
+                if !is_owner {
+                    return Err(ApiError::Forbidden(
+                        "Only the guild owner can manage roles".into(),
+                    ));
+                }
 
-            diesel::update(roles::table.filter(roles::id.eq(role_id)).filter(roles::guild_id.eq(guild_id)))
+                diesel::update(
+                    roles::table
+                        .filter(roles::id.eq(role_id))
+                        .filter(roles::guild_id.eq(guild_id)),
+                )
                 .set(&payload)
                 .returning(Role::as_returning())
                 .get_result(inner_conn)
+                .map_err(|e| match e {
+                    diesel::result::Error::NotFound => {
+                        ApiError::NotFound(format!("Role {} not found in this guild", role_id))
+                    }
+                    _ => ApiError::internal(e),
+                })
+            })
         })
-    }).await?.map_err(|_| ApiError::NotFound("Unauthorized or role not found".into()))?;
+        .await?
+        .map_err(|e| e)?;
 
     Ok(Json(updated_role))
 }
@@ -204,20 +235,41 @@ pub async fn delete_role(
     let user_id = auth.session.user_id;
 
     conn.interact(move |conn| {
-        conn.transaction::<_, diesel::result::Error, _>(|inner_conn| {
+        conn.transaction::<_, ApiError, _>(|inner_conn| {
             let is_owner = guilds::table
                 .filter(guilds::id.eq(guild_id))
                 .filter(guilds::owner_id.eq(user_id))
-                .execute(inner_conn)? > 0;
+                .count()
+                .get_result::<i64>(inner_conn)
+                .map_err(ApiError::internal)?
+                > 0;
 
             if !is_owner {
-                return Err(diesel::result::Error::NotFound);
+                return Err(ApiError::Forbidden(
+                    "Only the guild owner can delete roles".into(),
+                ));
             }
 
-            diesel::delete(roles::table.filter(roles::id.eq(role_id)).filter(roles::guild_id.eq(guild_id)))
-                .execute(inner_conn)
+            let rows_affected = diesel::delete(
+                roles::table
+                    .filter(roles::id.eq(role_id))
+                    .filter(roles::guild_id.eq(guild_id)),
+            )
+            .execute(inner_conn)
+            .map_err(ApiError::internal)?;
+
+            if rows_affected == 0 {
+                return Err(ApiError::NotFound(format!(
+                    "Role {} not found in this guild",
+                    role_id
+                )));
+            }
+
+            Ok(())
         })
-    }).await?.map_err(|_| ApiError::NotFound("Unauthorized or role not found".into()))?;
+    })
+    .await?
+    .map_err(|e| e)?;
 
     Ok(StatusCode::NO_CONTENT)
 }

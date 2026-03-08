@@ -111,7 +111,7 @@ impl From<diesel::result::Error> for ApiError {
     fn from(err: diesel::result::Error) -> Self {
         match &err {
             diesel::result::Error::RollbackTransaction => {
-                Self::Forbidden("Action forbidden by business logic.".into())
+                Self::Forbidden("Action fails to meet structural requirements.".into())
             }
             diesel::result::Error::NotFound => {
                 Self::NotFound("The requested resource was not found.".into())
