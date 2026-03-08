@@ -1,7 +1,7 @@
 use anyhow::{Context, Result, anyhow};
 use axum::Router;
 use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
-use src_backend::api::{auth, opaque::AppState, users, guilds, roles};
+use src_backend::api::{auth, opaque::AppState, users};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -22,43 +22,13 @@ pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations/");
         users::get_user,
         users::update_user,
         users::delete_user,
-
-        guilds::create_guild,
-        guilds::list_my_guilds,
-        guilds::delete_guild,
-        guilds::join_guild,
-        guilds::leave_guild,
-        guilds::create_guild_channel,
-        guilds::get_guild_channels,
-        guilds::get_guild_members,
-
-        roles::create_role,
-        roles::list_roles,
-        roles::update_role,
-        roles::delete_role,
     ),
     components(schemas(
         src_backend::db::models::users::User,
         src_backend::db::models::users::NewUser,
         src_backend::db::models::users::UpdateUser,
         src_backend::db::models::sessions::Session,
-
-        src_backend::db::models::guilds::Guild,
-        src_backend::db::models::guilds::NewGuild,
-        src_backend::db::models::guilds::GuildSummary,
-        src_backend::db::models::guilds::GuildMemberWithRoles,
-
-        src_backend::db::models::roles::Role,
-        src_backend::db::models::roles::NewRole,
-        src_backend::db::models::roles::UpdateRole,
-        src_backend::db::models::roles::RoleSummary,
-
-        src_backend::db::models::channels::ChannelType,
-        src_backend::db::models::guild_channels::NewGuildChannel,
-        src_backend::db::models::guild_channels::GuildChannel,
-        src_backend::db::models::private_channels::PrivateChannel,
-        src_backend::db::models::private_channels::NewPrivateChannel,
-
+        src_backend::api::errors::ErrorBody,
         auth::AuthResponse,
         auth::OpaqueRegisterStartRequest,
         auth::OpaqueRegisterStartResponse,
@@ -66,14 +36,11 @@ pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations/");
         auth::OpaqueLoginStartRequest,
         auth::OpaqueLoginStartResponse,
         auth::OpaqueLoginFinishRequest,
-
-        src_backend::api::errors::ErrorBody,
     )),
     modifiers(&SecurityAddon),
     tags(
         (name = "auth", description = "Authentication endpoints"),
         (name = "users", description = "User endpoints"),
-        (name = "guilds", description = "Guild endpoints"),
     )
 )]
 struct ApiDoc;
@@ -135,8 +102,6 @@ async fn main() -> Result<()> {
     let app = Router::new()
         .merge(auth::routes())
         .merge(users::routes())
-        .merge(guilds::routes())
-        .merge(roles::routes())
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
         .with_state(state);
 

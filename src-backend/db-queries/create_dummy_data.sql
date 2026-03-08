@@ -8,11 +8,6 @@ VALUES (DEFAULT, 'sigurd@test.com', 'deadbeef', 'sigurd', DEFAULT, true, DEFAULT
 INSERT INTO public.users (id, email, password_digest, user_handle, settings, email_verified, created_at, updated_at)
 VALUES (DEFAULT, 'peter@test.com', 'deadbeef', 'peter', DEFAULT, true, DEFAULT, DEFAULT);
 
--- add sessions
-INSERT INTO public.sessions (user_id, token, expires_at)
-VALUES (1, 'kurt_test_token', '2030-01-01 00:00:00');
-INSERT INTO public.sessions (user_id, token, expires_at)
-VALUES (2, 'sigurd_test_token', '2030-01-01 00:00:00');
 
 -- add displayed users
 INSERT INTO public.displayed_users (id, user_id, display_name, icon_url, status, created_at, updated_at)

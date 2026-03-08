@@ -1,15 +1,15 @@
 // @generated automatically by Diesel CLI.
 
 pub mod sql_types {
-    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[derive(diesel::query_builder::QueryId, Clone, diesel::sql_types::SqlType)]
     #[diesel(postgres_type(name = "channel_type"))]
     pub struct ChannelType;
 
-    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[derive(diesel::query_builder::QueryId, Clone, diesel::sql_types::SqlType)]
     #[diesel(postgres_type(name = "relationship_status"))]
     pub struct RelationshipStatus;
 
-    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[derive(diesel::query_builder::QueryId, Clone, diesel::sql_types::SqlType)]
     #[diesel(postgres_type(name = "user_status"))]
     pub struct UserStatus;
 }
@@ -18,6 +18,26 @@ diesel::table! {
     channel_members (channel_id, user_id) {
         channel_id -> Int8,
         user_id -> Int8,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::ChannelType;
+
+    channels (id) {
+        id -> Int8,
+        #[sql_name = "type"]
+        type_ -> ChannelType,
+        guild_id -> Nullable<Int8>,
+        #[max_length = 64]
+        name -> Nullable<Varchar>,
+        #[max_length = 1024]
+        topic -> Nullable<Varchar>,
+        position -> Nullable<Int4>,
+        permission -> Nullable<Int4>,
         created_at -> Timestamp,
         updated_at -> Timestamp,
     }
@@ -48,26 +68,6 @@ diesel::table! {
         #[max_length = 255]
         icon_url -> Nullable<Varchar>,
         status -> UserStatus,
-        created_at -> Timestamp,
-        updated_at -> Timestamp,
-    }
-}
-
-diesel::table! {
-    use diesel::sql_types::*;
-    use super::sql_types::ChannelType;
-
-    guild_channels (id) {
-        id -> Int8,
-        guild_id -> Int8,
-        #[max_length = 64]
-        name -> Varchar,
-        #[sql_name = "type"]
-        type_ -> ChannelType,
-        #[max_length = 1024]
-        topic -> Nullable<Varchar>,
-        position -> Int4,
-        permission -> Nullable<Int4>,
         created_at -> Timestamp,
         updated_at -> Timestamp,
     }
@@ -131,19 +131,6 @@ diesel::table! {
         message_id -> Int8,
         pinned_by -> Int8,
         pinned_at -> Timestamp,
-    }
-}
-
-diesel::table! {
-    use diesel::sql_types::*;
-    use super::sql_types::ChannelType;
-
-    private_channels (id) {
-        id -> Int8,
-        #[sql_name = "type"]
-        type_ -> ChannelType,
-        created_at -> Timestamp,
-        updated_at -> Timestamp,
     }
 }
 
@@ -220,23 +207,23 @@ diesel::table! {
     }
 }
 
-diesel::joinable!(channel_members -> guild_channels (channel_id));
+diesel::joinable!(channel_members -> channels (channel_id));
 diesel::joinable!(channel_members -> users (user_id));
+diesel::joinable!(channels -> guilds (guild_id));
+diesel::joinable!(direct_messages -> channels (channel_id));
 diesel::joinable!(direct_messages -> displayed_users (author_id));
-diesel::joinable!(direct_messages -> private_channels (channel_id));
 diesel::joinable!(displayed_users -> users (user_id));
-diesel::joinable!(guild_channels -> guilds (guild_id));
 diesel::joinable!(guild_members -> guilds (guild_id));
 diesel::joinable!(guild_members -> users (user_id));
+diesel::joinable!(guild_messages -> channels (channel_id));
 diesel::joinable!(guild_messages -> displayed_users (author_id));
-diesel::joinable!(guild_messages -> guild_channels (channel_id));
 diesel::joinable!(members_roles -> guilds (guild_id));
 diesel::joinable!(members_roles -> roles (role_id));
 diesel::joinable!(members_roles -> users (user_id));
+diesel::joinable!(pinned_direct_messages -> channels (channel_id));
 diesel::joinable!(pinned_direct_messages -> direct_messages (message_id));
 diesel::joinable!(pinned_direct_messages -> displayed_users (pinned_by));
-diesel::joinable!(pinned_direct_messages -> private_channels (channel_id));
-diesel::joinable!(pinned_guild_messages -> guild_channels (channel_id));
+diesel::joinable!(pinned_guild_messages -> channels (channel_id));
 diesel::joinable!(pinned_guild_messages -> guild_messages (message_id));
 diesel::joinable!(pinned_guild_messages -> users (pinned_by));
 diesel::joinable!(push_tokens -> users (user_id));
@@ -245,16 +232,15 @@ diesel::joinable!(sessions -> users (user_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     channel_members,
+    channels,
     direct_messages,
     displayed_users,
-    guild_channels,
     guild_members,
     guild_messages,
     guilds,
     members_roles,
     pinned_direct_messages,
     pinned_guild_messages,
-    private_channels,
     push_tokens,
     relationships,
     roles,
