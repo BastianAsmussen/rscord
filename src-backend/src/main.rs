@@ -137,7 +137,8 @@ async fn main() -> Result<()> {
     }
 
     // install our TLS cryptographic library used for API calls to fcm
-    CryptoProvider::install_default(crypto::aws_lc_rs::default_provider());
+    CryptoProvider::install_default(crypto::aws_lc_rs::default_provider())
+        .map_err(|e| anyhow!("Failed to get provider for TLS"))?;
 
     // Build AppState from the pool - this loads/generates the OPAQUE server keypair.
     let state = AppState::new(pool);

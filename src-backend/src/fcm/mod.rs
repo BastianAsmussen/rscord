@@ -2,6 +2,7 @@ use axum::extract::State;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper};
 use fcm_service::{FcmMessage, FcmNotification, FcmService, Target};
 use tracing::{info, warn, error};
+use anyhow::Result;
 use crate::db::{
     models::push_tokens::PushToken,
     schema::push_tokens,
@@ -12,15 +13,16 @@ type Pool = deadpool_diesel::postgres::Pool;
 // TODO: call the function when a massage is sent an the user is offline
 /// Sends out push notification to the user if they have android push tokens
 pub async fn send_push_notifications(State(pool): State<Pool>,
-                                     userid: i64,
+                                     user_id: i64,
                                      title: &str,
                                      body: &str,
-                                     image: Option<String>){
-    let conn = pool.get().await.expect("Could not get the thread pool");
+                                     image: Option<String>)
+-> Result<()>{
+    let conn = pool.get().await?;
     let result_tokens = conn
         .interact(move |conn| {
             push_tokens::dsl::push_tokens.
-                filter(push_tokens::dsl::user_id.eq(userid))
+                filter(push_tokens::dsl::user_id.eq(user_id))
                 .select(PushToken::as_select())
                 .load(conn)
         }).await;
@@ -32,6 +34,7 @@ pub async fn send_push_notifications(State(pool): State<Pool>,
             }
         }
     }
+    Ok(())
 }
 
 async fn send_push_notification(token: &str,
