@@ -103,6 +103,13 @@ pub async fn create_guild(
 /// Update Guild
 ///
 /// Only the Guild Owner can update the guild settings.
+///
+/// # Errors
+///
+/// - `ApiError::Unauthorized`: If the user is not logged in.
+/// - `ApiError::Forbidden`: If the user tries to delete the last remaining channel.
+/// - `ApiError::NotFound`: If the guild does not exist or the user is not the owner.
+/// - `ApiError::Internal`: If the database operation fails.
 #[utoipa::path(
     put,
     path = "/api/guilds/{id}",
@@ -143,6 +150,7 @@ pub async fn update_guild(
 /// List User Guilds
 ///
 /// # Errors
+///
 /// - `ApiError::Unauthorized`: If the user session is missing or invalid.
 /// - `ApiError::Internal`: If a database error occurs.
 #[utoipa::path(
@@ -178,6 +186,7 @@ pub async fn list_my_guilds(
 /// Join a Guild
 ///
 /// # Errors
+///
 /// - `ApiError::Unauthorized`: If the user is not logged in.
 /// - `ApiError::NotFound`: If the guild ID does not exist.
 /// - `ApiError::UnprocessableEntity`: If the user is already a member of the guild.
@@ -235,6 +244,12 @@ pub async fn join_guild(
 /// Leave a Guild
 ///
 /// Owners cannot leave: they must delete the guild instead.
+///
+/// # Errors
+///
+/// - `ApiError::Forbidden`: If the user is the owner and should use delete instead.
+/// - `ApiError::NotFound`: If the guild ID does not exist.
+/// - `ApiError::Internal`: If the database operation fails.
 #[utoipa::path(
     post,
     path = "/api/guilds/{id}/leave",
@@ -297,6 +312,7 @@ pub async fn leave_guild(
 /// Delete Guild
 ///
 /// # Errors
+///
 /// - `ApiError::Unauthorized`: If the user is not logged in.
 /// - `ApiError::NotFound`: If the guild does not exist or the user is not the owner.
 /// - `ApiError::Internal`: If the deletion fails or a cascade error occurs.
@@ -343,6 +359,7 @@ pub async fn delete_guild(
 /// Create Guild Channel
 ///
 /// # Errors
+///
 /// - `ApiError::Unauthorized`: If the user is not logged in.
 /// - `ApiError::NotFound`: If the guild does not exist or the user is not the owner.
 /// - `ApiError::UnprocessableEntity`: If an invalid channel type (example: DM) is provided.
@@ -416,7 +433,9 @@ pub async fn create_guild_channel(
 }
 
 /// Delete Guild Channel
+///
 /// # Errors
+///
 /// - `ApiError::Unauthorized`: If the user is not logged in.
 /// - `ApiError::Forbidden`: If the user tries to delete the last remaining channel.
 /// - `ApiError::NotFound`: If the guild/channel does not exist or the user is not the owner.
@@ -495,6 +514,12 @@ pub async fn delete_guild_channel(
 /// Update Guild Channel
 ///
 /// Only the Guild Owner can update channel settings.
+///
+/// # Errors
+///
+/// - `ApiError::Unauthorized`: If the user is not logged in.
+/// - `ApiError::NotFound`: If the guild does not exist or the user is not a member.
+/// - `ApiError::Internal`: If the database query fails.
 #[utoipa::path(
     put,
     path = "/api/guilds/{id}/channels/{channel_id}",
@@ -550,6 +575,7 @@ pub async fn update_guild_channel(
 /// Get Guild Channels
 ///
 /// # Errors
+///
 /// - `ApiError::Unauthorized`: If the user is not logged in.
 /// - `ApiError::NotFound`: If the guild does not exist or the user is not a member.
 /// - `ApiError::Internal`: If the database query fails.
@@ -599,6 +625,7 @@ pub async fn get_guild_channels(
 /// Returns all channels for a specific guild if the user is a member.
 ///
 /// # Errors
+///
 /// - `ApiError::Unauthorized`: If the user is not logged in.
 /// - `ApiError::NotFound`: If the guild does not exist or the user is not a member.
 /// - `ApiError::Internal`: If the database query fails.
@@ -618,6 +645,7 @@ pub async fn get_guild_members(
     State(pool): State<Pool>,
     Path(guild_id): Path<i64>,
 ) -> Result<Json<Vec<GuildMemberWithRoles>>, ApiError> {
+    use std::collections::{HashMap};
     let conn = pool.get().await?;
     let user_id = auth.session.user_id;
 
@@ -652,7 +680,6 @@ pub async fn get_guild_members(
                 ))
                 .load::<(i64, String, Option<RoleSummary>)>(conn)?;
 
-            use std::collections::HashMap;
             let mut member_map: HashMap<i64, GuildMemberWithRoles> = HashMap::new();
 
             for (u_id, handle, role_opt) in data {
