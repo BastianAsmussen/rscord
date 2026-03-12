@@ -1,0 +1,4 @@
+﻿allowed-duplicate-crates = ["windows-sys"]
+allowed-wildcard-imports = ["diesel::sql_types"]
+[lints.clippy]
+needless_for_each = "allow"

@@ -1,43 +1,48 @@
 use chrono::NaiveDateTime;
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
-#[derive(Debug, Serialize, Deserialize, Queryable, Selectable)]
+#[derive(Debug, Serialize, Deserialize, Queryable, Selectable, ToSchema)]
 #[diesel(table_name = crate::db::schema::users)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct User {
-    id: i64,
+    pub id: i64,
 
-    email: String,
-    password_digest: String,
+    pub email: String,
+    #[serde(skip_serializing)]
+    #[schema(ignore)]
+    pub opaque_record: Vec<u8>,
+
     #[diesel(column_name = user_handle)]
-    handle: String,
+    pub handle: String,
+    #[schema(value_type = Object)]
+    pub settings: serde_json::Value,
+    pub email_verified: bool,
 
-    settings: serde_json::Value,
-    email_verified: bool,
-
-    created_at: NaiveDateTime,
-    updated_at: NaiveDateTime,
+    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
 }
 
-#[derive(Debug, Deserialize, Insertable)]
+#[derive(Debug, Deserialize, Insertable, ToSchema)]
 #[diesel(table_name = crate::db::schema::users)]
 pub struct NewUser {
     pub email: String,
-    pub password_digest: String,
+    pub opaque_record: Vec<u8>,
+
     #[diesel(column_name = user_handle)]
     pub handle: String,
-    pub settings: serde_json::Value,
-    pub email_verified: bool,
 }
 
-#[derive(Debug, Deserialize, AsChangeset)]
+#[derive(Debug, Deserialize, AsChangeset, ToSchema)]
 #[diesel(table_name = crate::db::schema::users)]
 pub struct UpdateUser {
     pub email: Option<String>,
-    pub password_digest: Option<String>,
+    pub opaque_record: Option<Vec<u8>>,
+
     #[diesel(column_name = user_handle)]
     pub handle: Option<String>,
+    #[schema(value_type = Option<Object>)]
     pub settings: Option<serde_json::Value>,
     pub email_verified: Option<bool>,
 }

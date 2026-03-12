@@ -1,11 +1,18 @@
 [package]
 name = "src-backend"
+description = "API built for rscord"
+repository = "https://github.com/BastianAsmussen/rscord"
+categories = ["Web programming", "Authentication"]
+keywords = ["api", "async", "web", "data"]
 version = "0.1.0"
 edition = "2024"
+license-file = "../LICENSE"
 
 [dependencies]
 anyhow = "1.0.102"
-axum = "0.8.8"
+argon2 = { version = "0.5.3", features = ["std"] }
+axum = { version = "0.8.8", features = ["macros"] }
+axum-extra = { version = "0.12.5", features = ["cookie"] }
 chrono = { version = "0.4.43", features = ["serde"] }
 deadpool-diesel = { version = "0.6.1", features = ["postgres"] }
 diesel = { version = "2.3.6", features = ["postgres", "chrono", "serde_json"] }
@@ -13,8 +20,16 @@ diesel_migrations = { version = "2.3.1", features = ["postgres"] }
 dotenvy = "0.15.7"
 fcm-service = "0.2.3"
 rustls = { version = "0.23.36", features = ["ring"] }
+hex = "0.4.3"
+opaque-ke = { version = "4.0.1", features = ["argon2"] }
+rand = "0.10.0"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
+sha2 = "0.10.9"
+time = "0.3.47"
 tokio = { version = "1.49.0", features = ["full"] }
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
+utoipa = { version = "5.4.0", features = ["axum_extras", "chrono"] }
+utoipa-swagger-ui = { version = "9.0.2", features = ["axum"] }
+diesel-derive-enum = { version = "2.1.0", features = ["postgres"] }

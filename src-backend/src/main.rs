@@ -1,12 +1,102 @@
 use anyhow::{Context, Result, anyhow};
 use axum::Router;
 use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
+use src_backend::api::{auth, opaque::AppState, users, guilds, roles};
 use rustls::crypto;
 use rustls::crypto::CryptoProvider;
-use src_backend::api::{push_tokens, users};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use src_backend::db::schema::push_tokens::dsl::push_tokens;
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations/");
+
+#[derive(OpenApi)]
+#[openapi(
+    paths(
+        auth::register_start,
+        auth::register_finish,
+        auth::login_start,
+        auth::login_finish,
+        auth::logout,
+
+        users::create_user,
+        users::list_users,
+        users::get_user,
+        users::update_user,
+        users::delete_user,
+
+        guilds::create_guild,
+        guilds::list_my_guilds,
+        guilds::delete_guild,
+        guilds::join_guild,
+        guilds::leave_guild,
+        guilds::create_guild_channel,
+        guilds::get_guild_channels,
+        guilds::get_guild_members,
+
+        roles::create_role,
+        roles::list_roles,
+        roles::update_role,
+        roles::delete_role,
+    ),
+    components(schemas(
+        src_backend::db::models::users::User,
+        src_backend::db::models::users::NewUser,
+        src_backend::db::models::users::UpdateUser,
+        src_backend::db::models::sessions::Session,
+
+        src_backend::db::models::guilds::Guild,
+        src_backend::db::models::guilds::NewGuild,
+        src_backend::db::models::guilds::GuildSummary,
+        src_backend::db::models::guilds::GuildMemberWithRoles,
+
+        src_backend::db::models::roles::Role,
+        src_backend::db::models::roles::NewRole,
+        src_backend::db::models::roles::UpdateRole,
+        src_backend::db::models::roles::RoleSummary,
+
+        src_backend::db::models::channels::ChannelType,
+        src_backend::db::models::guild_channels::NewGuildChannel,
+        src_backend::db::models::guild_channels::GuildChannel,
+        src_backend::db::models::private_channels::PrivateChannel,
+        src_backend::db::models::private_channels::NewPrivateChannel,
+
+        auth::AuthResponse,
+        auth::OpaqueRegisterStartRequest,
+        auth::OpaqueRegisterStartResponse,
+        auth::OpaqueRegisterFinishRequest,
+        auth::OpaqueLoginStartRequest,
+        auth::OpaqueLoginStartResponse,
+        auth::OpaqueLoginFinishRequest,
+
+        src_backend::api::errors::ErrorBody,
+    )),
+    modifiers(&SecurityAddon),
+    tags(
+        (name = "auth", description = "Authentication endpoints"),
+        (name = "users", description = "User endpoints"),
+        (name = "guilds", description = "Guild endpoints"),
+    )
+)]
+struct ApiDoc;
+
+struct SecurityAddon;
+
+impl utoipa::Modify for SecurityAddon {
+    fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
+        if let Some(components) = openapi.components.as_mut() {
+            components.add_security_scheme(
+                "session_token",
+                utoipa::openapi::security::SecurityScheme::ApiKey(
+                    utoipa::openapi::security::ApiKey::Cookie(
+                        utoipa::openapi::security::ApiKeyValue::new("session_token"),
+                    ),
+                ),
+            );
+        }
+    }
+}
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -28,8 +118,6 @@ async fn main() -> Result<()> {
         .build()
         .context("Failed to build database connection pool!")?;
 
-    // Verify that the pool can actually hand out a connection before we
-    // accept traffic - fail fast instead of serving 500s.
     {
         let conn = pool
             .get()
@@ -47,10 +135,17 @@ async fn main() -> Result<()> {
     // install our TLS cryptographic library used for API calls to fcm
     CryptoProvider::install_default(crypto::aws_lc_rs::default_provider());
 
+    // Build AppState from the pool - this loads/generates the OPAQUE server keypair.
+    let state = AppState::new(pool);
+
     let app = Router::new()
+        .merge(auth::routes())
         .merge(users::routes())
+        .merge(guilds::routes())
+        .merge(roles::routes())
         .merge(push_tokens::routes())
-        .with_state(pool);
+        .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
+        .with_state(state);
 
     let bind_addr = "0.0.0.0:8080";
     let listener = tokio::net::TcpListener::bind(bind_addr)
@@ -58,18 +153,18 @@ async fn main() -> Result<()> {
         .with_context(|| format!("Failed to bind to {bind_addr}!"))?;
 
     tracing::info!("Listening on {bind_addr}...");
+    tracing::info!("Swagger UI available at http://{bind_addr}/swagger-ui/");
 
     axum::serve(listener, app)
         .with_graceful_shutdown(shutdown_signal())
         .await
-        .context("Server exited with an error")?;
+        .context("Server exited with an error!")?;
 
     tracing::info!("Server shut down gracefully.");
 
     Ok(())
 }
 
-/// Waits for a CTRL+C (SIGINT) signal to trigger a graceful shutdown.
 async fn shutdown_signal() {
     tokio::signal::ctrl_c()
         .await

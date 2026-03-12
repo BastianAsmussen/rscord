@@ -1,0 +1,17 @@
+[package]
+name = "client-emulator"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.102"
+clap = { version = "4.5.60", features = ["derive"] }
+env_logger = "0.11.9"
+hex = "0.4.3"
+log = "0.4.29"
+opaque-ke = { version = "4.0.1", features = ["argon2", "std"] }
+rand = "0.8.5"
+reqwest = { version = "0.13.2", features = ["blocking", "cookies", "json"] }
+rpassword = "7.4.0"
+serde = { version = "1.0.228", features = ["derive"] }
+sha2 = "0.10.9"
