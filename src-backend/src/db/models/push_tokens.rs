@@ -13,7 +13,7 @@ pub struct PushToken{
 }
 
 impl PushToken {
-    pub fn user_id(&self) -> &i64 {
+    pub const fn user_id(&self) -> &i64 {
         &self.user_id
     }
     pub fn token(&self) -> &str {

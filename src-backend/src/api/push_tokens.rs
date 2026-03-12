@@ -2,7 +2,7 @@ use axum::{
     Json, Router,
     extract::{Path, State},
     http::StatusCode,
-    routing::{get, post},
+    routing::post,
 };
 use axum::routing::delete;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, associations::HasTable};
