@@ -1,5 +1,6 @@
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 #[derive(Debug, Serialize, Deserialize, Queryable, Selectable)]
 #[diesel(table_name = crate::db::schema::push_tokens)]
@@ -20,7 +21,7 @@ impl PushToken {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Insertable)]
+#[derive(Debug, Serialize, Deserialize, Insertable, ToSchema)]
 #[diesel(table_name = crate::db::schema::push_tokens)]
 pub struct NewPushToken{
     pub user_id: i64,

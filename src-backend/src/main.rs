@@ -1,11 +1,10 @@
 use anyhow::{Context, Result, anyhow};
 use axum::Router;
 use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
-use src_backend::api::{auth, opaque::AppState, users, guilds, roles};
+use src_backend::api::{auth, opaque::AppState, users, guilds, roles, push_tokens};
 use rustls::crypto;
 use rustls::crypto::CryptoProvider;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
-use src_backend::db::schema::push_tokens::dsl::push_tokens;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
@@ -39,6 +38,9 @@ pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations/");
         roles::list_roles,
         roles::update_role,
         roles::delete_role,
+
+        push_tokens::add_push_token,
+        push_tokens::remove_push_token,
     ),
     components(schemas(
         src_backend::db::models::users::User,
@@ -61,6 +63,8 @@ pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations/");
         src_backend::db::models::guild_channels::GuildChannel,
         src_backend::db::models::private_channels::PrivateChannel,
         src_backend::db::models::private_channels::NewPrivateChannel,
+
+        src_backend::db::models::push_tokens::NewPushToken,
 
         auth::AuthResponse,
         auth::OpaqueRegisterStartRequest,

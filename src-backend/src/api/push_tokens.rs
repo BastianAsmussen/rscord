@@ -5,7 +5,8 @@ use axum::{
     routing::{get, post},
 };
 use axum::routing::delete;
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper, associations::HasTable};
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, associations::HasTable};
+use crate::api::opaque::AppState;
 use super::errors::ApiError;
 use crate::db::{
     models::push_tokens::NewPushToken,
@@ -15,7 +16,7 @@ use crate::db::{
 type Pool = deadpool_diesel::postgres::Pool;
 
 /// Returns the `/api/push-token` create and delete routes for push token
-pub fn routes() -> Router<Pool> {
+pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/api/push-token", post(add_push_token))
         .route("/api/push-token/{token}", delete(remove_push_token))
@@ -24,6 +25,17 @@ pub fn routes() -> Router<Pool> {
 /// POST /api/push-token
 ///
 /// Add a push token
+#[utoipa::path(
+    post,
+    path = "/api/push-token",
+    request_body = NewPushToken,
+    responses(
+        (status = 204, description = "push token uploaded successfully",),
+        (status = 409, description = "duplicate Token",),
+    ),
+    security(("session_token" = [])),
+    tag = "pushTokens"
+)]
 async fn add_push_token(
     State(pool): State<Pool>,
     Json(payload): Json<NewPushToken>,
@@ -43,6 +55,18 @@ async fn add_push_token(
 /// DELETE /api/push-token:token
 ///
 /// Removes a push token
+#[utoipa::path(
+    delete,
+    path = "/api/push-token/{token}",
+    params(("token" = String, Path, description = "The push token to be deleted")),
+    responses((status = 204, description = "token deleted")),
+    responses((status = 404, description = "token could not be found")),
+    security(("session_token" = [])),
+    tag = "pushTokens"
+)]
+/// DELETE /api/push-token/{token}
+///
+/// remove a push token
 async fn remove_push_token(
     State(pool): State<Pool>,
     Path(token): Path<String>
@@ -58,7 +82,7 @@ async fn remove_push_token(
         .await??;
 
     if rows_deleted == 0 {
-        return Err(ApiError::NotFound(format!("User {token_for_error} not found")));
+        return Err(ApiError::NotFound(format!("Token {token_for_error} not found")));
     }
 
     Ok(StatusCode::NO_CONTENT)
