@@ -71,11 +71,10 @@ async fn remove_push_token(State(pool): State<Pool>, token: String){
                     .execute(conn)
             }).await;
 
-        if let Ok(Ok(rows_deleted)) = rows_deleted {
-            if rows_deleted == 0 {
+        if let Ok(Ok(rows_deleted)) = rows_deleted
+            && rows_deleted == 0 {
                 warn!("Error deleting push token: {}", token_for_error)
             }
-        }
     }
     else {
         error!("Could not connect to DB in delete_push_token function")
