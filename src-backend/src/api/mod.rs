@@ -6,3 +6,4 @@ pub mod password;
 pub mod users;
 pub mod guilds;
 pub mod roles;
+pub mod push_tokens;

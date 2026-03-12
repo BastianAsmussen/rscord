@@ -68,3 +68,4 @@ dependencies {
 }
 
 apply(from = "tauri.build.gradle.kts")
+apply(plugin = "com.google.gms.google-services")

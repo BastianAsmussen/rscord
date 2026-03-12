@@ -18,6 +18,8 @@ deadpool-diesel = { version = "0.6.1", features = ["postgres"] }
 diesel = { version = "2.3.6", features = ["postgres", "chrono", "serde_json"] }
 diesel_migrations = { version = "2.3.1", features = ["postgres"] }
 dotenvy = "0.15.7"
+fcm-service = "0.2.3"
+rustls = { version = "0.23.36", features = ["ring"] }
 hex = "0.4.3"
 opaque-ke = { version = "4.0.1", features = ["argon2"] }
 rand = "0.10.0"

@@ -1,7 +1,9 @@
 use anyhow::{Context, Result, anyhow};
 use axum::Router;
 use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
-use src_backend::api::{auth, opaque::AppState, users, guilds, roles};
+use src_backend::api::{auth, opaque::AppState, users, guilds, roles, push_tokens};
+use rustls::crypto;
+use rustls::crypto::CryptoProvider;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -36,6 +38,9 @@ pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations/");
         roles::list_roles,
         roles::update_role,
         roles::delete_role,
+
+        push_tokens::add_push_token,
+        push_tokens::remove_push_token,
     ),
     components(schemas(
         src_backend::db::models::users::User,
@@ -58,6 +63,8 @@ pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations/");
         src_backend::db::models::guild_channels::GuildChannel,
         src_backend::db::models::private_channels::PrivateChannel,
         src_backend::db::models::private_channels::NewPrivateChannel,
+
+        src_backend::db::models::push_tokens::NewPushToken,
 
         auth::AuthResponse,
         auth::OpaqueRegisterStartRequest,
@@ -129,6 +136,10 @@ async fn main() -> Result<()> {
         tracing::info!("Database migrations applied successfully.");
     }
 
+    // install our TLS cryptographic library used for API calls to fcm
+    CryptoProvider::install_default(crypto::aws_lc_rs::default_provider())
+        .map_err(|e| anyhow!("Failed to get provider for TLS"))?;
+
     // Build AppState from the pool - this loads/generates the OPAQUE server keypair.
     let state = AppState::new(pool);
 
@@ -137,6 +148,7 @@ async fn main() -> Result<()> {
         .merge(users::routes())
         .merge(guilds::routes())
         .merge(roles::routes())
+        .merge(push_tokens::routes())
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
         .with_state(state);
 

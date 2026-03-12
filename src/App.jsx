@@ -1,3 +1,7 @@
+import { createSignal } from "solid-js";
+import logo from "./assets/logo.svg";
+import { invoke } from "@tauri-apps/api/core";
+import "./App.css";
 import { Route } from "@solidjs/router";
 import AuthGuard from "./auth/AuthGuard.jsx";
 
@@ -18,15 +22,6 @@ export default function App() {
                     </AuthGuard>
                 )}
             />
-
-            <Route
-                path="/settings"
-                component={() => (
-                    <AuthGuard>
-                        <Settings />
-                    </AuthGuard>
-                )}
-            />
         </>
     );
-}
+  }
