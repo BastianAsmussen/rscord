@@ -2,6 +2,7 @@ import {registerForPushNotifications} from '@choochmeque/tauri-plugin-notificati
 import {platform} from "@tauri-apps/plugin-os";
 import {invoke} from "@tauri-apps/api/core";
 
+//This function should be called after a successful login
 export async function add_push_token(user_id: number) {
     if (platform() == "android") {
         const token = await registerForPushNotifications()

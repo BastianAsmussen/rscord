@@ -36,6 +36,7 @@ pub fn routes() -> Router<AppState> {
     security(("session_token" = [])),
     tag = "pushTokens"
 )]
+//TODO: add proper authentication once login has been merged into master
 async fn add_push_token(
     State(pool): State<Pool>,
     Json(payload): Json<NewPushToken>,
@@ -64,9 +65,7 @@ async fn add_push_token(
     security(("session_token" = [])),
     tag = "pushTokens"
 )]
-/// DELETE /api/push-token/{token}
-///
-/// remove a push token
+//TODO: add proper authentication once login has been merged into master
 async fn remove_push_token(
     State(pool): State<Pool>,
     Path(token): Path<String>
