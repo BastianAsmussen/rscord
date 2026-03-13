@@ -1,4 +1,3 @@
-use anyhow::{Context, Result, anyhow};
 use chrono::NaiveDateTime;
 use log::info;
 use opaque_ke::{
@@ -18,7 +17,7 @@ use std::sync::Arc;
 
 use crate::api::BASE_URL;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct RegisteredUser {
     id: i64,
 
@@ -26,7 +25,7 @@ pub struct RegisteredUser {
     handle: String,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct LoggedInUser {
     id: i64,
 
@@ -42,7 +41,7 @@ pub struct LoggedInUser {
     session: AuthResponse,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct AuthResponse {
     user_id: i64,
 
@@ -107,14 +106,14 @@ struct LoginFinishReq<'a> {
     client_message: &'a str,
 }
 
-#[tauri::command]
-pub async fn sign_up(email: &str, handle: &str, password: &[u8]) -> Result<RegisteredUser> {
+#[tauri::command(async)]
+pub async fn sign_up(email: &str, handle: &str, password: &[u8]) -> Result<RegisteredUser, String> {
     let client = Client::new();
 
     let mut client_rng = OsRng;
     let client_registration_start =
         ClientRegistration::<DefaultCipherSuite>::start(&mut client_rng, password)
-            .context("Failed to start client registration!")?;
+            .map_err(|e| e.to_string())?;
     let client_msg_hex = hex::encode(client_registration_start.message.serialize());
     let start_url = format!("{BASE_URL}/api/auth/opaque/register-start");
     let res: RegisterStartResp = client
@@ -126,18 +125,17 @@ pub async fn sign_up(email: &str, handle: &str, password: &[u8]) -> Result<Regis
         })
         .send()
         .await
-        .context("POST register-start request failed!")?
+        .map_err(|e| e.to_string())?
         .error_for_status()
-        .context("register-start returned error status!")?
+        .map_err(|e| e.to_string())?
         .json()
         .await
-        .context("Failed to parse register-start response JSON!")?;
+        .map_err(|e| e.to_string())?;
 
-    let server_msg_bytes = hex::decode(&res.server_message)
-        .context("Failed to hex-decode server_message from register-start!")?;
+    let server_msg_bytes = hex::decode(&res.server_message).map_err(|e| e.to_string())?;
     let server_response =
         RegistrationResponse::<DefaultCipherSuite>::deserialize(&server_msg_bytes)
-            .context("Failed to deserialize RegistrationResponse!")?;
+            .map_err(|e| e.to_string())?;
 
     let mut client_rng = OsRng;
     let registration_finish_result = client_registration_start
@@ -148,7 +146,7 @@ pub async fn sign_up(email: &str, handle: &str, password: &[u8]) -> Result<Regis
             server_response,
             ClientRegistrationFinishParameters::default(),
         )
-        .context("ClientRegistration finish failed!")?;
+        .map_err(|e| e.to_string())?;
 
     let upload_msg = registration_finish_result.message;
     let upload_msg_hex = hex::encode(upload_msg.serialize());
@@ -161,31 +159,31 @@ pub async fn sign_up(email: &str, handle: &str, password: &[u8]) -> Result<Regis
         })
         .send()
         .await
-        .context("POST register-finish request failed")?;
+        .map_err(|e| e.to_string())?;
 
     let status = finish_res.status();
     if status.is_success() {
-        let user: RegisteredUser = finish_res.json().await?;
+        let user: RegisteredUser = finish_res.json().await.map_err(|e| e.to_string())?;
 
         Ok(user)
     } else {
-        let body = finish_res.text().await?;
+        let body = finish_res.text().await.map_err(|e| e.to_string())?;
 
-        Err(anyhow!(body))
+        Err(body)
     }
 }
 
-#[tauri::command]
-pub async fn log_in(email: &str, password: &[u8]) -> Result<LoggedInUser> {
+#[tauri::command(async)]
+pub async fn log_in(email: &str, password: &[u8]) -> Result<LoggedInUser, String> {
     let cookie_jar = Arc::new(Jar::default());
     let client = ClientBuilder::new()
         .cookie_provider(cookie_jar.clone())
         .build()
-        .context("Failed to build Reqwest client!")?;
+        .map_err(|e| e.to_string())?;
 
     let mut client_rng = OsRng;
     let client_login_start = ClientLogin::<DefaultCipherSuite>::start(&mut client_rng, password)
-        .context("Failed to start client login!")?;
+        .map_err(|e| e.to_string())?;
     let client_msg_hex = hex::encode(client_login_start.message.serialize());
 
     let start_url = format!("{BASE_URL}/api/auth/opaque/login-start");
@@ -197,17 +195,16 @@ pub async fn log_in(email: &str, password: &[u8]) -> Result<LoggedInUser> {
         })
         .send()
         .await
-        .context("POST login-start request failed")?
+        .map_err(|e| e.to_string())?
         .error_for_status()
-        .context("login-start returned error status")?
+        .map_err(|e| e.to_string())?
         .json()
         .await
-        .context("Failed to parse login-start response JSON")?;
+        .map_err(|e| e.to_string())?;
 
-    let server_msg_bytes = hex::decode(&res.server_message)
-        .context("Failed to hex-decode server_message from login-start!")?;
+    let server_msg_bytes = hex::decode(&res.server_message).map_err(|e| e.to_string())?;
     let server_response = CredentialResponse::<DefaultCipherSuite>::deserialize(&server_msg_bytes)
-        .context("Failed to deserialize CredentialResponse!")?;
+        .map_err(|e| e.to_string())?;
 
     let mut client_rng = OsRng;
     let login_finish_result = client_login_start
@@ -218,7 +215,7 @@ pub async fn log_in(email: &str, password: &[u8]) -> Result<LoggedInUser> {
             server_response,
             ClientLoginFinishParameters::default(),
         )
-        .context("ClientLogin finish failed!")?;
+        .map_err(|e| e.to_string())?;
 
     let finish_msg = login_finish_result.message;
     let finish_msg_hex = hex::encode(finish_msg.serialize());
@@ -231,28 +228,29 @@ pub async fn log_in(email: &str, password: &[u8]) -> Result<LoggedInUser> {
         })
         .send()
         .await
-        .context("POST login-finish request failed")?;
+        .map_err(|e| e.to_string())?;
 
     let status = finish_res.status();
     if !status.is_success() {
-        let body = finish_res.text().await?;
+        let body = finish_res.text().await.map_err(|e| e.to_string())?;
 
-        return Err(anyhow!("Login failed, server response: {body}"));
+        return Err(format!("Login failed, server response: {body}"));
     }
 
-    let auth: AuthResponse = finish_res.json().await?;
+    let auth: AuthResponse = finish_res.json().await.map_err(|e| e.to_string())?;
 
     // Validate cookies.
-    let cookie_header = if let Some(c) = cookie_jar.cookies(&Url::parse(&BASE_URL)?) {
-        c
-    } else {
-        return Err(anyhow!("No cookies returned from server!"));
-    };
+    let cookie_header =
+        if let Some(c) = cookie_jar.cookies(&Url::parse(&BASE_URL).map_err(|e| e.to_string())?) {
+            c
+        } else {
+            return Err("No cookies returned from server!".to_string());
+        };
 
     let cookie_str = if let Ok(s) = cookie_header.to_str() {
         s
     } else {
-        return Err(anyhow!("Cookie header was not valid UTF-8!"));
+        return Err("Cookie header was not valid UTF-8!".to_string());
     };
 
     if let Some(cookie) = cookie_str
@@ -261,19 +259,23 @@ pub async fn log_in(email: &str, password: &[u8]) -> Result<LoggedInUser> {
     {
         info!("Received session cookie: {cookie}");
     } else {
-        return Err(anyhow!("No session_token cookie found in jar!"));
+        return Err("No session_token cookie found in jar!".to_string());
     }
 
     let user_endpoint = format!("{BASE_URL}/api/users/{}", auth.user_id);
-    let user_res = client.get(&user_endpoint).send().await?;
+    let user_res = client
+        .get(&user_endpoint)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
     let status = user_res.status();
     if !status.is_success() {
-        let body = user_res.text().await?;
+        let body = user_res.text().await.map_err(|e| e.to_string())?;
 
-        return Err(anyhow!("Failed to get user details: {body}"));
+        return Err(format!("Failed to get user details: {body}"));
     }
 
-    let user = user_res.json().await?;
+    let user = user_res.json().await.map_err(|e| e.to_string())?;
 
     Ok(user)
 }
