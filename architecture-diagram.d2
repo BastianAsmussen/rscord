@@ -1,0 +1,59 @@
+vars: {
+  d2-config: {
+    layout-engine: elk
+    # Terminal theme code
+    theme-id: 200
+  }
+}
+
+frontend : "Frontend" {
+  client: "Client" {
+    shape: diamond
+  }
+  solidjs: "SolidJS" {
+    shape: rectangle
+  }
+  rust-tauri: "Rust Tauri" {
+    shape: rectangle
+  }
+
+  client <-> solidjs
+  solidjs <-> rust-tauri
+}
+
+backend : "Backend" {
+  rest-api: "REST API" {
+    shape: rectangle
+    description: |md
+    Rust using
+    * axum
+    * tokio
+    * diesel
+    * deadpool
+    * opaque-ke
+    |
+  }
+  database: "Database" {
+    shape: cylinder
+    description: |md
+    PostgreSQL
+    |
+  }
+
+  rest-api <-> database
+}
+
+cloud : "Cloud" {
+  shape: cloud
+  near: center-right
+  height: 650
+  fcm : "Firebase Cloud Messaging" {
+    shape :  rectangle
+    description: |md
+      Used when we send push notifications to android
+    |
+  }
+}
+
+frontend.rust-tauri <-> backend.rest-api
+backend.rest-api -> cloud.fcm -> frontend.client
