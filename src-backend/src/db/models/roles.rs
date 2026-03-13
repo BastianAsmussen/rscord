@@ -1,8 +1,8 @@
-﻿use chrono::NaiveDateTime;
+use crate::db::schema::{members_roles, roles};
+use chrono::NaiveDateTime;
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
-use crate::db::schema::{roles, members_roles};
 
 #[derive(Debug, Serialize, Deserialize, Queryable, Selectable, Insertable, ToSchema)]
 #[diesel(table_name = roles)]

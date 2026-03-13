@@ -1,8 +1,8 @@
-﻿use axum::{
-    extract::{Path, State}, http::StatusCode,
+use axum::{
+    Json, Router,
+    extract::{Path, State},
+    http::StatusCode,
     routing::{delete, post},
-    Json,
-    Router,
 };
 use diesel::prelude::*;
 use diesel::{Connection, ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper};
@@ -258,7 +258,8 @@ pub async fn delete_role(
 
             if rows_affected == 0 {
                 return Err(ApiError::NotFound(format!(
-                    "Role {role_id} not found in this guild",)));
+                    "Role {role_id} not found in this guild",
+                )));
             }
 
             Ok(())

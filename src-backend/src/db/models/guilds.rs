@@ -1,8 +1,8 @@
-﻿use chrono::NaiveDateTime;
+use crate::db::schema::guild_members;
+use chrono::NaiveDateTime;
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
-use crate::db::schema::{guild_members};
 
 #[derive(Debug, Serialize, Deserialize, Queryable, Selectable, Insertable, ToSchema)]
 #[diesel(table_name = crate::db::schema::guilds)]
@@ -52,12 +52,4 @@ pub struct GuildMemberWithRoles {
 pub struct UpdateGuild {
     pub name: Option<String>,
     pub icon_url: Option<String>,
-}
-
-#[derive(Debug, Deserialize, AsChangeset, ToSchema)]
-#[diesel(table_name = crate::db::schema::guild_channels)]
-pub struct UpdateGuildChannel {
-    pub name: Option<String>,
-    pub topic: Option<String>,
-    pub position: Option<i32>,
 }

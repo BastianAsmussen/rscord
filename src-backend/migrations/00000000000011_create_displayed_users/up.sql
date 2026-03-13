@@ -1,6 +1,6 @@
 CREATE TYPE user_status AS ENUM(
     'online',
-    'dnd',
+    'dnd', -- "Do not Disturb"
     'idle',
     'offline'
 );
