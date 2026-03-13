@@ -18,6 +18,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
+chrono = { version = "0.4.43", features = ["serde"] }
 tauri = { version = "2", features = [] }
 tauri-plugin-opener = "2"
 tauri-plugin-notifications = { version = "0.4", features = ["push-notifications"] }
@@ -25,4 +26,9 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tauri-plugin-os = "2"
 log = "0.4.29"
-reqwest = { version = "0.13.2", features = ["json", "default-tls", "blocking"] }
+reqwest = { version = "0.13.2", features = ["json", "default-tls", "blocking", "cookies"] }
+opaque-ke = { version = "4.0.1", features = ["argon2", "std"] }
+anyhow = "1.0.102"
+sha2 = "0.10.9"
+hex = "0.4.3"
+rand = "0.8.5"
