@@ -59,10 +59,9 @@ pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations/");
         src_backend::db::models::roles::RoleSummary,
 
         src_backend::db::models::channels::ChannelType,
-        src_backend::db::models::guild_channels::NewGuildChannel,
-        src_backend::db::models::guild_channels::GuildChannel,
-        src_backend::db::models::private_channels::PrivateChannel,
-        src_backend::db::models::private_channels::NewPrivateChannel,
+        src_backend::db::models::channels::Channel,
+        src_backend::db::models::channels::NewChannel,
+        src_backend::db::models::channels::UpdateChannel,
 
         src_backend::db::models::push_tokens::NewPushToken,
 

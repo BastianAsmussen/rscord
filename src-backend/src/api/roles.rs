@@ -1,8 +1,8 @@
-﻿use axum::{
-    extract::{Path, State}, http::StatusCode,
+use axum::{
+    Json, Router,
+    extract::{Path, State},
+    http::StatusCode,
     routing::{delete, post},
-    Json,
-    Router,
 };
 use diesel::prelude::*;
 use diesel::{Connection, ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper};
@@ -67,7 +67,7 @@ pub async fn create_role(
                     .map_err(ApiError::internal)?;
 
                 let guild = guild.ok_or_else(|| {
-                    ApiError::NotFound(format!("Guild with ID {} does not exist", guild_id))
+                    ApiError::NotFound(format!("Guild with ID {guild_id} does not exist"))
                 })?;
 
                 if guild.owner_id != user_id {
@@ -84,8 +84,7 @@ pub async fn create_role(
                     .map_err(ApiError::internal)
             })
         })
-        .await?
-        .map_err(|e| e)?;
+        .await??;
 
     Ok((StatusCode::CREATED, Json(role)))
 }
@@ -195,14 +194,13 @@ pub async fn update_role(
                 .get_result(inner_conn)
                 .map_err(|e| match e {
                     diesel::result::Error::NotFound => {
-                        ApiError::NotFound(format!("Role {} not found in this guild", role_id))
+                        ApiError::NotFound(format!("Role {role_id} not found in this guild"))
                     }
                     _ => ApiError::internal(e),
                 })
             })
         })
-        .await?
-        .map_err(|e| e)?;
+        .await??;
 
     Ok(Json(updated_role))
 }
@@ -260,16 +258,14 @@ pub async fn delete_role(
 
             if rows_affected == 0 {
                 return Err(ApiError::NotFound(format!(
-                    "Role {} not found in this guild",
-                    role_id
+                    "Role {role_id} not found in this guild",
                 )));
             }
 
             Ok(())
         })
     })
-    .await?
-    .map_err(|e| e)?;
+    .await??;
 
     Ok(StatusCode::NO_CONTENT)
 }
