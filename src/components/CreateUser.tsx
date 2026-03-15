@@ -14,45 +14,11 @@ export function CreateUser() {
         e.preventDefault();
 
         try {
-            const encoder = new TextEncoder();
-
-            const passwordBytes = Array.from(
-                encoder.encode(password())
-            );
-
             const user = await invoke("sign_up", {
                 email: email(),
                 handle: username(),
-                password: passwordBytes
-            });const register: JSX.EventHandler<HTMLFormElement, SubmitEvent> = async (e) => {
-                e.preventDefault();
-
-                try {
-                    const encoder = new TextEncoder();
-
-                    const passwordBytes = Array.from(
-                        encoder.encode(password())
-                    );
-
-                    const user = await invoke("sign_up", {
-                        email: email(),
-                        handle: username(),
-                        password: passwordBytes
-                    });
-
-
-                    setUsername("");
-                    setEmail("");
-                    setPassword("");
-
-                    setOpen(false);
-
-                } catch (err) {
-                    console.error("Registration failed:", err);
-                    alert("Failed to create user");
-                }
-            };
-
+                password: password(),
+            });
 
             setUsername("");
             setEmail("");

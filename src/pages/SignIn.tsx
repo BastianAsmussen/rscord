@@ -13,12 +13,9 @@ export default function SignIn() {
         setError("");
 
         try {
-            const encoder = new TextEncoder();
-            const passwordBytes = Array.from(encoder.encode(password()));
-
             const user = await invoke("log_in", {
                 email: username(),
-                password: passwordBytes
+                password: password(),
             });
 
         } catch (err) {

@@ -107,7 +107,8 @@ struct LoginFinishReq<'a> {
 }
 
 #[tauri::command(async)]
-pub async fn sign_up(email: &str, handle: &str, password: &[u8]) -> Result<RegisteredUser, String> {
+pub async fn sign_up(email: &str, handle: &str, password: &str) -> Result<RegisteredUser, String> {
+    let password = password.as_bytes();
     let client = Client::new();
 
     let mut client_rng = OsRng;
@@ -174,7 +175,8 @@ pub async fn sign_up(email: &str, handle: &str, password: &[u8]) -> Result<Regis
 }
 
 #[tauri::command(async)]
-pub async fn log_in(email: &str, password: &[u8]) -> Result<LoggedInUser, String> {
+pub async fn log_in(email: &str, password: &str) -> Result<LoggedInUser, String> {
+    let password = password.as_bytes();
     let cookie_jar = Arc::new(Jar::default());
     let client = ClientBuilder::new()
         .cookie_provider(cookie_jar.clone())
