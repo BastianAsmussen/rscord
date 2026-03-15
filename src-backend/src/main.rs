@@ -4,7 +4,8 @@ use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
 use rustls::crypto;
 use rustls::crypto::CryptoProvider;
 use src_backend::api::{
-    auth, guilds, messages, opaque::AppState, push_tokens, roles, users, websocket,
+    auth, direct_messages, guilds, keys, messages, opaque::AppState, push_tokens, roles, users,
+    websocket,
 };
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use utoipa::OpenApi;
@@ -23,6 +24,14 @@ pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations/");
 
         messages::send_guild_message,
         messages::get_guild_messages,
+
+        direct_messages::send_direct_message,
+        direct_messages::get_direct_messages,
+
+        keys::upload_identity_key,
+        keys::upload_signed_prekey,
+        keys::upload_one_time_prekeys,
+        keys::get_prekey_bundle,
 
         users::create_user,
         users::list_users,
@@ -55,6 +64,17 @@ pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations/");
 
         src_backend::db::models::messages::GuildMessage,
         src_backend::db::models::messages::NewGuildMessage,
+
+        src_backend::db::models::direct_messages::DirectMessage,
+        src_backend::db::models::direct_messages::NewDirectMessage,
+
+        src_backend::db::models::keys::IdentityKey,
+        src_backend::db::models::keys::UploadIdentityKey,
+        src_backend::db::models::keys::SignedPrekey,
+        src_backend::db::models::keys::UploadSignedPrekey,
+        src_backend::db::models::keys::OneTimePrekey,
+        src_backend::db::models::keys::UploadOneTimePrekeys,
+        src_backend::db::models::keys::PreKeyBundleResponse,
 
         src_backend::db::models::guilds::Guild,
         src_backend::db::models::guilds::NewGuild,
@@ -156,6 +176,8 @@ async fn main() -> Result<()> {
         .merge(guilds::routes())
         .merge(roles::routes())
         .merge(messages::routes())
+        .merge(direct_messages::routes())
+        .merge(keys::routes())
         .merge(push_tokens::routes())
         .merge(websocket::routes())
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))

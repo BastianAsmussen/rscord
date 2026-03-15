@@ -1,7 +1,9 @@
 pub mod auth;
 pub mod auth_extractor;
+pub mod direct_messages;
 pub mod errors;
 pub mod guilds;
+pub mod keys;
 pub mod messages;
 pub mod opaque;
 pub mod password;
