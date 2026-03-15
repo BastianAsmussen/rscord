@@ -1,14 +1,14 @@
-﻿use crate::api::auth_extractor::AuthUser;
+use crate::api::auth_extractor::AuthUser;
 use crate::api::errors::ApiError;
 use crate::api::opaque::AppState;
 use crate::db::models::messages::{GuildMessage, NewGuildMessage};
-use crate::db::schema::{channels, channels_members, guild_members, guild_messages, sessions};
+use crate::db::schema::{channels, guild_members, guild_messages, sessions};
+use ApiError::Forbidden;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use diesel::prelude::*;
-use ApiError::Forbidden;
 
 pub fn routes() -> Router<AppState> {
     Router::new()
@@ -69,7 +69,8 @@ pub async fn send_guild_message(
                 .filter(guild_members::guild_id.eq(guild_id))
                 .filter(guild_members::user_id.eq(user_id))
                 .count()
-                .get_result::<i64>(conn)? > 0;
+                .get_result::<i64>(conn)?
+                > 0;
 
             if !is_member {
                 return Err(diesel::result::Error::RollbackTransaction);
@@ -89,7 +90,9 @@ pub async fn send_guild_message(
         .map_err(|e| ApiError::Internal(e.to_string()))?
         .map_err(|e| match e {
             diesel::result::Error::NotFound => ApiError::Unauthorized("Invalid session".into()),
-            diesel::result::Error::RollbackTransaction => ApiError::Forbidden("Not a member".into()),
+            diesel::result::Error::RollbackTransaction => {
+                ApiError::Forbidden("Not a member".into())
+            }
             _ => ApiError::Internal(e.to_string()),
         })?;
 
@@ -143,7 +146,8 @@ pub async fn get_guild_messages(
                 .filter(guild_members::guild_id.eq(guild_id))
                 .filter(guild_members::user_id.eq(user_id))
                 .count()
-                .get_result::<i64>(conn)? > 0;
+                .get_result::<i64>(conn)?
+                > 0;
 
             if !is_member {
                 return Err(diesel::result::Error::RollbackTransaction);
@@ -160,7 +164,9 @@ pub async fn get_guild_messages(
         .map_err(|e| ApiError::Internal(e.to_string()))?
         .map_err(|e| match e {
             diesel::result::Error::NotFound => ApiError::Unauthorized("Invalid session".into()),
-            diesel::result::Error::RollbackTransaction => Forbidden("Not a member of this guild".into()),
+            diesel::result::Error::RollbackTransaction => {
+                Forbidden("Not a member of this guild".into())
+            }
             _ => ApiError::Internal(e.to_string()),
         })?;
 

@@ -1,10 +1,11 @@
 use anyhow::{Context, Result, anyhow};
 use axum::Router;
-use axum::routing::get;
 use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
-use src_backend::api::{auth, opaque::AppState, users, guilds, roles, push_tokens, messages, websocket};
 use rustls::crypto;
 use rustls::crypto::CryptoProvider;
+use src_backend::api::{
+    auth, guilds, messages, opaque::AppState, push_tokens, roles, users, websocket,
+};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -142,9 +143,9 @@ async fn main() -> Result<()> {
         tracing::info!("Database migrations applied successfully.");
     }
 
-    // install our TLS cryptographic library used for API calls to fcm
+    // Install our TLS cryptographic library used for API calls to FCM.
     CryptoProvider::install_default(crypto::aws_lc_rs::default_provider())
-        .map_err(|e| anyhow!("Failed to get provider for TLS"))?;
+        .map_err(|e| anyhow!("Failed to get provider for TLS: {:?}", *e))?;
 
     // Build AppState from the pool - this loads/generates the OPAQUE server keypair.
     let state = AppState::new(pool);
