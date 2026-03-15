@@ -36,7 +36,8 @@ diesel::table! {
     channels_members (channel_id, user_id) {
         channel_id -> Int8,
         user_id -> Int8,
-        joined_at -> Timestamp,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
     }
 }
 

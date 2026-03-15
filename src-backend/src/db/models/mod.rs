@@ -5,3 +5,4 @@ pub mod roles;
 pub mod sessions;
 pub mod users;
 pub mod push_tokens;
+pub mod messages;
