@@ -106,11 +106,30 @@ diesel::table! {
 }
 
 diesel::table! {
+    identity_keys (id) {
+        id -> Int8,
+        user_id -> Int8,
+        public_key -> Bytea,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
+    }
+}
+
+diesel::table! {
     members_roles (guild_id, user_id, role_id) {
         guild_id -> Int8,
         user_id -> Int8,
         role_id -> Int8,
         assigned_at -> Timestamp,
+    }
+}
+
+diesel::table! {
+    one_time_prekeys (id) {
+        id -> Int8,
+        user_id -> Int8,
+        public_key -> Bytea,
+        created_at -> Timestamp,
     }
 }
 
@@ -182,6 +201,16 @@ diesel::table! {
 }
 
 diesel::table! {
+    signed_prekeys (id) {
+        id -> Int8,
+        user_id -> Int8,
+        public_key -> Bytea,
+        signature -> Bytea,
+        created_at -> Timestamp,
+    }
+}
+
+diesel::table! {
     users (id) {
         id -> Int8,
         #[max_length = 320]
@@ -214,9 +243,11 @@ diesel::joinable!(guild_members -> guilds (guild_id));
 diesel::joinable!(guild_members -> users (user_id));
 diesel::joinable!(guild_messages -> channels (channel_id));
 diesel::joinable!(guild_messages -> displayed_users (author_id));
+diesel::joinable!(identity_keys -> users (user_id));
 diesel::joinable!(members_roles -> guilds (guild_id));
 diesel::joinable!(members_roles -> roles (role_id));
 diesel::joinable!(members_roles -> users (user_id));
+diesel::joinable!(one_time_prekeys -> users (user_id));
 diesel::joinable!(pinned_direct_messages -> channels (channel_id));
 diesel::joinable!(pinned_direct_messages -> direct_messages (message_id));
 diesel::joinable!(pinned_direct_messages -> displayed_users (pinned_by));
@@ -226,6 +257,7 @@ diesel::joinable!(pinned_guild_messages -> users (pinned_by));
 diesel::joinable!(push_tokens -> users (user_id));
 diesel::joinable!(roles -> guilds (guild_id));
 diesel::joinable!(sessions -> users (user_id));
+diesel::joinable!(signed_prekeys -> users (user_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     channels,
@@ -235,13 +267,16 @@ diesel::allow_tables_to_appear_in_same_query!(
     guild_members,
     guild_messages,
     guilds,
+    identity_keys,
     members_roles,
+    one_time_prekeys,
     pinned_direct_messages,
     pinned_guild_messages,
     push_tokens,
     relationships,
     roles,
     sessions,
+    signed_prekeys,
     users,
     verification_codes,
 );
