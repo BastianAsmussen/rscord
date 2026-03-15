@@ -10,7 +10,7 @@ use axum::{Json, Router};
 use diesel::prelude::*;
 use ApiError::Forbidden;
 
-pub fn dm_routes() -> Router<AppState> {
+pub fn routes() -> Router<AppState> {
     Router::new()
         .route(
             "/api/channels/{channel_id}/messages",

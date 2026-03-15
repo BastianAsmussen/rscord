@@ -2,17 +2,19 @@
 use crate::api::opaque::AppState;
 use crate::db::schema::{channels, guild_members};
 use axum::extract::ws::Utf8Bytes;
-use axum::{
-    extract::{
-        ws::{Message, WebSocket, WebSocketUpgrade},
-        State,
-    },
-    response::IntoResponse,
-};
+use axum::{extract::{
+    ws::{Message, WebSocket, WebSocketUpgrade},
+    State,
+}, response::IntoResponse, Router};
 use diesel::prelude::*;
 use futures_util::{SinkExt, StreamExt};
 use std::collections::HashSet;
+use axum::routing::get;
 use tokio::sync::broadcast::error::RecvError;
+
+pub fn routes() -> Router<AppState> {
+    Router::new().route("/ws", get(ws_handler))
+}
 
 pub async fn ws_handler(
     ws: WebSocketUpgrade,

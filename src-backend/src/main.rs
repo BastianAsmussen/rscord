@@ -2,13 +2,12 @@ use anyhow::{Context, Result, anyhow};
 use axum::Router;
 use axum::routing::get;
 use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
-use src_backend::api::{auth, opaque::AppState, users, guilds, roles, push_tokens, messages};
+use src_backend::api::{auth, opaque::AppState, users, guilds, roles, push_tokens, messages, websocket};
 use rustls::crypto;
 use rustls::crypto::CryptoProvider;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
-use src_backend::api::websocket::ws_handler;
 
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations/");
 
@@ -155,9 +154,9 @@ async fn main() -> Result<()> {
         .merge(users::routes())
         .merge(guilds::routes())
         .merge(roles::routes())
-        .merge(messages::dm_routes())
+        .merge(messages::routes())
         .merge(push_tokens::routes())
-        .route("/ws", get(ws_handler))
+        .merge(websocket::routes())
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
         .with_state(state);
 
