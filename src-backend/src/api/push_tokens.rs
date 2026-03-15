@@ -1,21 +1,18 @@
+use super::errors::ApiError;
+use crate::api::opaque::AppState;
+use crate::db::{models::push_tokens::NewPushToken, schema::push_tokens};
+use axum::routing::delete;
 use axum::{
     Json, Router,
     extract::{Path, State},
     http::StatusCode,
     routing::post,
 };
-use axum::routing::delete;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, associations::HasTable};
-use crate::api::opaque::AppState;
-use super::errors::ApiError;
-use crate::db::{
-    models::push_tokens::NewPushToken,
-    schema::push_tokens
-};
 
 type Pool = deadpool_diesel::postgres::Pool;
 
-/// Returns the `/api/push-token` create and delete routes for push token
+/// Returns the `/api/push-token` create and delete routes for push token.
 pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/api/push-token", post(add_push_token))
@@ -24,7 +21,7 @@ pub fn routes() -> Router<AppState> {
 
 /// POST /api/push-token
 ///
-/// Add a push token
+/// Add a push token.
 #[utoipa::path(
     post,
     path = "/api/push-token",
@@ -36,7 +33,7 @@ pub fn routes() -> Router<AppState> {
     security(("session_token" = [])),
     tag = "pushTokens"
 )]
-//TODO: add proper authentication once login has been merged into master
+//TODO: Add proper authentication once login has been merged into master.
 async fn add_push_token(
     State(pool): State<Pool>,
     Json(payload): Json<NewPushToken>,
@@ -48,14 +45,14 @@ async fn add_push_token(
             .values(payload)
             .execute(conn)
     })
-        .await??;
+    .await??;
 
     Ok(StatusCode::NO_CONTENT)
 }
 
 /// DELETE /api/push-token:token
 ///
-/// Removes a push token
+/// Removes a push token.
 #[utoipa::path(
     delete,
     path = "/api/push-token/{token}",
@@ -65,13 +62,13 @@ async fn add_push_token(
     security(("session_token" = [])),
     tag = "pushTokens"
 )]
-//TODO: add proper authentication once login has been merged into master
+//TODO: Add proper authentication once login has been merged into master.
 async fn remove_push_token(
     State(pool): State<Pool>,
-    Path(token): Path<String>
+    Path(token): Path<String>,
 ) -> Result<StatusCode, ApiError> {
     let conn = pool.get().await?;
-    let token_for_error = token.to_string();
+    let token_for_error = token.clone();
 
     let rows_deleted: usize = conn
         .interact(move |conn| {
@@ -81,7 +78,9 @@ async fn remove_push_token(
         .await??;
 
     if rows_deleted == 0 {
-        return Err(ApiError::NotFound(format!("Token {token_for_error} not found")));
+        return Err(ApiError::NotFound(format!(
+            "Token {token_for_error} not found"
+        )));
     }
 
     Ok(StatusCode::NO_CONTENT)
