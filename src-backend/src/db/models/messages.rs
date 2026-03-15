@@ -1,4 +1,4 @@
-﻿use crate::db::schema::guild_messages;
+use crate::db::schema::guild_messages;
 use chrono::NaiveDateTime;
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};

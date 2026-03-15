@@ -1,15 +1,19 @@
-﻿use crate::api::auth_extractor::AuthUser;
+use crate::api::auth_extractor::AuthUser;
 use crate::api::opaque::AppState;
 use crate::db::schema::{channels, guild_members};
 use axum::extract::ws::Utf8Bytes;
-use axum::{extract::{
-    ws::{Message, WebSocket, WebSocketUpgrade},
-    State,
-}, response::IntoResponse, Router};
+use axum::routing::get;
+use axum::{
+    Router,
+    extract::{
+        State,
+        ws::{Message, WebSocket, WebSocketUpgrade},
+    },
+    response::IntoResponse,
+};
 use diesel::prelude::*;
 use futures_util::{SinkExt, StreamExt};
 use std::collections::HashSet;
-use axum::routing::get;
 use tokio::sync::broadcast::error::RecvError;
 
 pub fn routes() -> Router<AppState> {

@@ -1,5 +1,5 @@
 use crate::db::schema::channels_members;
-use chrono::{NaiveDateTime};
+use chrono::NaiveDateTime;
 use diesel::prelude::*;
 use serde::Serialize;
 use utoipa::ToSchema;
