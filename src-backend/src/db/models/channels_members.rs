@@ -1,5 +1,5 @@
 use crate::db::schema::channels_members;
-use chrono::{DateTime, Utc};
+use chrono::{NaiveDateTime};
 use diesel::prelude::*;
 use serde::Serialize;
 use utoipa::ToSchema;
@@ -11,5 +11,5 @@ use utoipa::ToSchema;
 pub struct ChannelsMembers {
     pub channel_id: i64,
     pub user_id: i64,
-    pub joined_at: DateTime<Utc>,
+    pub created_at: NaiveDateTime,
 }

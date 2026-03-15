@@ -1,7 +1,8 @@
 use anyhow::{Context, Result, anyhow};
 use axum::Router;
+use axum::routing::get;
 use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
-use src_backend::api::{auth, opaque::AppState, users, guilds, roles, push_tokens};
+use src_backend::api::{auth, opaque::AppState, users, guilds, roles, push_tokens, messages, websocket};
 use rustls::crypto;
 use rustls::crypto::CryptoProvider;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -18,6 +19,9 @@ pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations/");
         auth::login_start,
         auth::login_finish,
         auth::logout,
+
+        messages::send_guild_message,
+        messages::get_guild_messages,
 
         users::create_user,
         users::list_users,
@@ -47,6 +51,9 @@ pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations/");
         src_backend::db::models::users::NewUser,
         src_backend::db::models::users::UpdateUser,
         src_backend::db::models::sessions::Session,
+
+        src_backend::db::models::messages::GuildMessage,
+        src_backend::db::models::messages::NewGuildMessage,
 
         src_backend::db::models::guilds::Guild,
         src_backend::db::models::guilds::NewGuild,
@@ -147,7 +154,9 @@ async fn main() -> Result<()> {
         .merge(users::routes())
         .merge(guilds::routes())
         .merge(roles::routes())
+        .merge(messages::routes())
         .merge(push_tokens::routes())
+        .merge(websocket::routes())
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
         .with_state(state);
 

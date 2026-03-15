@@ -5,8 +5,9 @@ use axum::extract::FromRef;
 use chrono::{Duration, NaiveDateTime, Utc};
 use opaque_ke::{CipherSuite, Ristretto255, ServerLogin, ServerSetup, TripleDh};
 use sha2::Sha512;
-use tokio::sync::Mutex;
+use tokio::sync::{broadcast, Mutex};
 use tracing::warn;
+use crate::db::models::messages::{GuildMessage};
 
 pub struct DefaultCipherSuite;
 
@@ -44,6 +45,8 @@ pub struct AppState {
     pub pending_registrations: Arc<Mutex<HashMap<String, PendingRegistration>>>,
     /// In-flight login handshakes (TTL: 2 min).
     pub pending_logins: Arc<Mutex<HashMap<String, PendingLogin>>>,
+    /// The global message bus for real time events
+    pub tx: broadcast::Sender<GuildMessage>,
 }
 
 impl AppState {
@@ -74,12 +77,14 @@ impl AppState {
                     .expect("OPAQUE_SERVER_SETUP deserialization failed")
             },
         );
+        let (tx, _) = broadcast::channel(1024);
 
         Self {
             pool,
             server_setup: Arc::new(server_setup),
             pending_registrations: Arc::new(Mutex::new(HashMap::new())),
             pending_logins: Arc::new(Mutex::new(HashMap::new())),
+            tx,
         }
     }
 

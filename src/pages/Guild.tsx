@@ -1,208 +1,227 @@
-import { createMemo, createSignal } from "solid-js";
+import {createEffect, createMemo, createSignal, onCleanup, onMount} from "solid-js";
+import {invoke} from "@tauri-apps/api/core";
 
 import GuildSidebar from "../components/guild/GuildSidebar";
 import ChannelSidebar from "../components/guild/ChannelSidebar";
 import ChatView from "../components/guild/ChatView";
 import MemberList from "../components/guild/MemberList";
 import MessageInput from "../components/guild/MessageInput";
+import {listen} from "@tauri-apps/api/event";
 
-// todo: add real logic
-
-type Guild = {
-  id: number;
-  name: string;
-};
-
-type Channel = {
-  id: number;
-  name: string;
-  guild: number;
-};
-
-type Member = {
-  id: number;
-  name: string;
-};
-
-type Message = {
-  id: number;
-  user: string;
-  text: string;
+type Guild = { id: number; name: string };
+type Channel = { id: number; name: string; guild_id: number; type: string; };
+type Role = { id: number; name: string };
+type Member = { user_id: number; user_handle: string; roles: Role[] };
+type GuildMessage = {
+    id: number;
+    author_id: number;
+    reply_to_id: number | null;
+    channel_id: number;
+    contents: string | null;
+    edited_at: string;
+    created_at: string;
 };
 
 export default function GuildPage() {
-  const guilds: Guild[] = [
-    { id: 1, name: "test" },
-    { id: 2, name: "ok lars" },
-    { id: 3, name: "techcollege" },
-  ];
+    let ws: WebSocket | null = null;
+    const [guilds, setGuilds] = createSignal<Guild[]>([]);
+    const [channels, setChannels] = createSignal<Channel[]>([]);
+    const [members, setMembers] = createSignal<Member[]>([]);
+    const [messages, setMessages] = createSignal<GuildMessage[]>([]);
 
-  const channels: Channel[] = [
-    { id: 1, name: "test", guild: 1 },
-    { id: 2, name: "test2", guild: 1 },
-    { id: 3, name: "test3", guild: 1 },
+    const [activeGuild, setActiveGuild] = createSignal<number | null>(null);
+    const [activeChannel, setActiveChannel] = createSignal<number | null>(null);
 
-    { id: 4, name: "lars lars lars lars lars lars", guild: 2 },
-    { id: 5, name: "lars ting", guild: 2 },
-    { id: 6, name: "lars quotes", guild: 2 },
+    const [showMobileChannels, setShowMobileChannels] = createSignal(false);
+    const [showMembers, setShowMembers] = createSignal(false);
 
-    { id: 7, name: "skema", guild: 3 },
-    { id: 8, name: "elever", guild: 3 },
-  ];
+    onMount(async () => {
+        await invoke("init_websocket");
 
-  const members: Member[] = [
-    { id: 1, name: "bastian" },
-    { id: 2, name: "jacob" },
-    { id: 3, name: "mathias" },
-    { id: 4, name: "casper" },
-  ];
+        const unlisten = await listen<string>("new-message", (event) => {
+            try {
+                const newMessage: GuildMessage = JSON.parse(event.payload);
+                if (newMessage.channel_id === activeChannel()) {
+                    setMessages((prev) => [...prev, newMessage]);
+                }
+            } catch (e) {
+                console.error("Failed to parse incoming message:", e);
+            }
+        });
 
-  const [activeGuild, setActiveGuild] = createSignal(1);
-  const [activeChannel, setActiveChannel] = createSignal(1);
+        onCleanup(() => unlisten());
 
-  const [messages, setMessages] = createSignal<Message[]>([
-    { id: 1, user: "bastian", text: "jacob stop med at spille mercy!!!" },
-    { id: 2, user: "jacob", text: "uwu <3" },
-  ]);
+        try {
+            const data: Guild[] = await invoke("list_my_guilds");
+            setGuilds(data);
+            if (data.length > 0) setActiveGuild(data[0].id);
+        } catch (e) {
+            console.error("Failed to load guilds:", e);
+        }
+    });
 
-  const [showMobileChannels, setShowMobileChannels] = createSignal(false);
-  const [showMembers, setShowMembers] = createSignal(false);
+    const memberDisplayList = createMemo(() =>
+        members().map(m => ({
+            id: m.user_id,
+            name: m.user_handle
+        }))
+    );
 
-  const filteredChannels = createMemo(() =>
-      channels.filter((channel) => channel.guild === activeGuild())
-  );
+    // When activeGuild changes, fetch channels and members
+    createEffect(async () => {
+        const guildId = activeGuild();
+        if (!guildId) return;
 
-  const activeGuildName = createMemo(
-      () => guilds.find((guild) => guild.id === activeGuild())?.name ?? "Guild"
-  );
+        try {
+            const [newChannels, newMembers] = await Promise.all([
+                invoke<Channel[]>("get_guild_channels", { id: guildId }),
+                invoke<Member[]>("get_guild_members", { id: guildId })
+            ]);
 
-  const activeChannelName = createMemo(
-      () => channels.find((channel) => channel.id === activeChannel())?.name ?? "channel"
-  );
+            setChannels(newChannels);
 
-  const selectGuild = (id: number) => {
-    setActiveGuild(id);
+            setMembers(newMembers);
 
-    const firstChannelForGuild = channels.find((channel) => channel.guild === id);
-    if (firstChannelForGuild) {
-      setActiveChannel(firstChannelForGuild.id);
-    }
+            if (newChannels.length > 0) setActiveChannel(newChannels[0].id);
+        } catch (e) {
+            console.error("Failed to load guild data:", e);
+        }
+    });
 
-    setShowMobileChannels(true);
-  };
+    const activeGuildName = createMemo(() => {
+        const guild = guilds().find((g) => g.id === activeGuild());
+        return guild ? guild.name : "Guild";
+    });
 
-  const selectChannel = (id: number) => {
-    setActiveChannel(id);
-    setShowMobileChannels(false);
-  };
+    const activeChannelName = createMemo(() => {
+        const channel = channels().find((c) => c.id === activeChannel());
+        return channel ? channel.name : "channel";
+    });
 
-  const sendMessage = (text: string) => {
-    setMessages((current) => [
-      ...current,
-      {
-        id: Date.now(),
-        user: "You",
-        text,
-      },
-    ]);
-  };
+    const selectGuild = (id: number) => {
+        setActiveGuild(id);
+        setShowMobileChannels(true);
+    };
 
-  return (
-      <div class="flex h-screen bg-base text-text overflow-hidden">
+    const selectChannel = async (id: number) => {
+        const channel = channels().find(c => c.id === id);
+        if (channel && channel.type === "Text") {
+            setActiveChannel(id);
+            setShowMobileChannels(false);
+
+            try {
+                setMessages([]); // Clear old channel's messages
+                const history = await invoke<GuildMessage[]>("get_messages", { channelId: id });
+                setMessages(history);
+            } catch (e) {
+                console.error("Failed to load channel history:", e);
+            }
+        }
+    };
+
+    const sendMessage = async (text: string) => {
+        const cid = activeChannel();
+        if (!cid) return;
+        try {
+            const msg = await invoke<GuildMessage>("send_message", { channelId: cid, content: text });
+
+            setMessages((prev) => [...prev, msg]);
+        } catch (e) {
+            console.error("Send failed:", e);
+        }
+    };
+
+    return (<div class="flex h-screen bg-base text-text overflow-hidden">
         <GuildSidebar
-            guilds={guilds}
-            activeGuild={activeGuild()}
+            guilds={guilds()}
+            activeGuild={activeGuild() ?? 0}
             onSelect={selectGuild}
         />
 
         <div class="hidden md:block shrink-0">
-          <ChannelSidebar
-              channels={filteredChannels()}
-              activeChannel={activeChannel()}
-              onSelect={selectChannel}
-              title={activeGuildName()}
-          />
+            <ChannelSidebar
+                channels={channels()}
+                activeChannel={activeChannel() ?? 0}
+                onSelect={selectChannel}
+                title={activeGuildName()}
+            />
         </div>
 
         <div class="flex flex-col flex-1 min-w-0">
-          <div class="md:hidden flex items-center justify-between gap-3 p-3 border-b border-surface0 bg-mantle min-w-0">
-            <button
-                type="button"
-                onClick={() => setShowMobileChannels(true)}
-                class="px-3 py-1 bg-surface0 rounded text-text shrink-0"
-            >
-              channels
-            </button>
+            <div
+                class="md:hidden flex items-center justify-between gap-3 p-3 border-b border-surface0 bg-mantle min-w-0">
+                <button
+                    type="button"
+                    onClick={() => setShowMobileChannels(true)}
+                    class="px-3 py-1 bg-surface0 rounded text-text shrink-0"
+                >
+                    channels
+                </button>
 
-            <div class="flex-1 min-w-0 text-center">
-              <div class="font-bold text-primary truncate">{activeGuildName()}</div>
-              <div class="text-sm text-subtext0 truncate"># {activeChannelName()}</div>
+                <div class="flex-1 min-w-0 text-center">
+                    <div class="font-bold text-primary truncate">{activeGuildName()}</div>
+                    <div class="text-sm text-subtext0 truncate"># {activeChannelName()}</div>
+                </div>
+
+                <button
+                    type="button"
+                    onClick={() => setShowMembers(true)}
+                    class="px-3 py-1 bg-surface0 rounded text-text shrink-0"
+                >
+                    memebers
+                </button>
             </div>
 
-            <button
-                type="button"
-                onClick={() => setShowMembers(true)}
-                class="px-3 py-1 bg-surface0 rounded text-text shrink-0"
-            >
-              memebers
-            </button>
-          </div>
-
-          <ChatView messages={messages()} />
-          <MessageInput onSend={sendMessage} />
+            <ChatView messages={messages()}/>
+            <MessageInput onSend={sendMessage}/>
         </div>
 
         <div class="hidden md:block shrink-0">
-          <MemberList members={members} />
+            <MemberList members={memberDisplayList()}/>
         </div>
 
-        {showMobileChannels() && (
+        {showMobileChannels() && (<div
+            class="fixed inset-0 backdrop md:hidden z-40"
+            onClick={() => setShowMobileChannels(false)}
+        >
             <div
-                class="fixed inset-0 backdrop md:hidden z-40"
-                onClick={() => setShowMobileChannels(false)}
+                class="absolute left-16 top-0 bottom-0 w-64 bg-mantle"
+                onClick={(e) => e.stopPropagation()}
             >
-              <div
-                  class="absolute left-16 top-0 bottom-0 w-64 bg-mantle"
-                  onClick={(e) => e.stopPropagation()}
-              >
                 <div class="flex items-center justify-between p-4 border-b border-surface0">
-                  <h2 class="font-bold text-subtext0 text-sm">{activeGuildName()}</h2>
+                    <h2 class="font-bold text-subtext0 text-sm">{activeGuildName()}</h2>
 
-                  <button
-                      type="button"
-                      class="px-2 py-1 rounded bg-surface0 hover:bg-surface1 text-text"
-                      onClick={() => setShowMobileChannels(false)}
-                  >
-                    ✕
-                  </button>
+                    <button
+                        type="button"
+                        class="px-2 py-1 rounded bg-surface0 hover:bg-surface1 text-text"
+                        onClick={() => setShowMobileChannels(false)}
+                    >
+                        ✕
+                    </button>
                 </div>
 
                 <ChannelSidebar
-                    channels={filteredChannels()}
-                    activeChannel={activeChannel()}
+                    channels={channels()}
+                    activeChannel={activeChannel() ?? 0}
                     onSelect={selectChannel}
                 />
-              </div>
             </div>
-        )}
+        </div>)}
 
-        {showMembers() && (
+        {showMembers() && (<div
+            class="fixed inset-0 backdrop md:hidden z-40"
+            onClick={() => setShowMembers(false)}
+        >
             <div
-                class="fixed inset-0 backdrop md:hidden z-40"
-                onClick={() => setShowMembers(false)}
+                class="absolute right-0 top-0 bottom-0"
+                onClick={(e) => e.stopPropagation()}
             >
-              <div
-                  class="absolute right-0 top-0 bottom-0"
-                  onClick={(e) => e.stopPropagation()}
-              >
                 <MemberList
-                    members={members}
+                    members={memberDisplayList()}
                     mobile={true}
                     onClose={() => setShowMembers(false)}
                 />
-              </div>
             </div>
-        )}
-      </div>
-  );
+        </div>)}
+    </div>);
 }

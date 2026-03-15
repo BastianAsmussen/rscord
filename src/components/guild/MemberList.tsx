@@ -7,6 +7,7 @@ type Member = {
 
 export default function MemberList(props: {
     members: Member[];
+    currentUserId?: number; // Todo: add logic later so we can have users name in special color
     onClose?: () => void;
     mobile?: boolean;
 }) {
@@ -29,7 +30,13 @@ export default function MemberList(props: {
             <div class="flex flex-col gap-2">
                 <For each={props.members}>
                     {(member) => (
-                        <div class="px-3 py-2 rounded bg-surface0 text-text">
+                        <div
+                            class={`px-3 py-2 rounded ${
+                                member.id === props.currentUserId
+                                    ? "bg-surface0 text-yellow-400 font-bold"
+                                    : "bg-surface0 text-text"
+                            }`}
+                        >
                             {member.name}
                         </div>
                     )}
