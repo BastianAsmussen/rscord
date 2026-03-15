@@ -8,12 +8,6 @@ FROM rust:${RUST_VERSION} AS build
 ARG APP_NAME
 WORKDIR /app
 
-# # Install host build dependencies.
-# RUN apt-get update && \
-#     apt-get install -y build-essential
-# RUN apt-get clean && \
-#     rm -rf /var/lib/apt/lists/*
-
 # Build the application.
 # Leverage a cache mount to /usr/local/cargo/registry/
 # for downloaded dependencies, a cache mount to /usr/local/cargo/git/db
@@ -36,21 +30,19 @@ cp ./target/release/$APP_NAME /bin/server
 # runtime dependencies for the application. This often uses a different base
 # image from the build stage where the necessary files are copied from the
 # build stage.
-FROM debian:bookworm-slim AS final
+FROM debian:trixie-slim AS final
 
 RUN apt-get update && \
     apt-get install -y libpq-dev && \
+    apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
 # Create a non-privileged user that the app will run under.
 # See https://docs.docker.com/go/dockerfile-user-best-practices/
 ARG UID=10001
-RUN adduser \
-    --disabled-password \
-    --gecos "" \
-    --home "/nonexistent" \
-    --shell "/sbin/nologin" \
+RUN useradd \
     --no-create-home \
+    --shell "/sbin/nologin" \
     --uid "${UID}" \
     appuser
 USER appuser
