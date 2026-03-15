@@ -26,6 +26,9 @@ pub fn dm_routes() -> Router<AppState> {
 ///
 /// # Errors
 ///
+/// - `ApiError::Unauthorized`: If the user session is missing or invalid.
+/// - `ApiError::Forbidden`: If the user is not a member of the guild.
+/// - `ApiError::Internal`: If the database operation fails.
 #[utoipa::path(
     post,
     path = "/api/channels/{channel_id}/messages",
@@ -98,6 +101,9 @@ pub async fn send_guild_message(
 ///
 /// # Errors
 ///
+/// - `ApiError::Unauthorized`: If the user session is missing or invalid.
+/// - `ApiError::Forbidden`: If the user is not a member of the guild.
+/// - `ApiError::Internal`: If the database operation fails.
 #[utoipa::path(
     get,
     path = "/api/channels/{channel_id}/messages",
