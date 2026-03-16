@@ -18,7 +18,7 @@ export default function SignIn() {
                 password: password(),
             });
 
-            localStorage.setItem("session", JSON.stringify(user.auth.token));
+            localStorage.setItem("session", JSON.stringify({token: user.auth.token, expires: user.auth.expires}));
             window.location.href = "/";
 
         } catch (err) {
