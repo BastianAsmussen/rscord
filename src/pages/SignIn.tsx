@@ -18,6 +18,7 @@ export default function SignIn() {
                 password: password(),
             });
 
+            console.log(`Logged in as @${user.user.handle}.`);
         } catch (err) {
             console.error(err);
             setError(String(err));

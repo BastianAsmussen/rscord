@@ -27,18 +27,8 @@ pub struct RegisteredUser {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct LoggedInUser {
-    id: i64,
-
-    email: String,
-    handle: String,
-
-    settings: serde_json::Value,
-    email_verified: bool,
-
-    created_at: NaiveDateTime,
-    updated_at: NaiveDateTime,
-
-    session: AuthResponse,
+    user: User,
+    auth: AuthResponse,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -49,7 +39,7 @@ struct AuthResponse {
     expires_at: NaiveDateTime,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct User {
     pub id: i64,
     pub email: String,
@@ -270,6 +260,7 @@ pub async fn log_in(email: &str, password: &str) -> Result<LoggedInUser, String>
         .send()
         .await
         .map_err(|e| e.to_string())?;
+
     let status = user_res.status();
     if !status.is_success() {
         let body = user_res.text().await.map_err(|e| e.to_string())?;
@@ -279,5 +270,5 @@ pub async fn log_in(email: &str, password: &str) -> Result<LoggedInUser, String>
 
     let user = user_res.json().await.map_err(|e| e.to_string())?;
 
-    Ok(user)
+    Ok(LoggedInUser { user, auth })
 }
