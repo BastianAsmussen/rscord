@@ -11,3 +11,4 @@ pub mod push_tokens;
 pub mod roles;
 pub mod users;
 pub mod websocket;
+pub mod relationships;
