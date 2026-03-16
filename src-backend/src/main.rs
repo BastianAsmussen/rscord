@@ -4,8 +4,8 @@ use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
 use rustls::crypto;
 use rustls::crypto::CryptoProvider;
 use src_backend::api::{
-    auth, direct_messages, guilds, keys, messages, opaque::AppState, push_tokens, roles, users,
-    websocket, relationships,
+    auth, direct_messages, guild_messages, guilds, keys, opaque::AppState, push_tokens, roles,
+    users, websocket, relationships,
 };
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use utoipa::OpenApi;
@@ -22,8 +22,8 @@ pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations/");
         auth::login_finish,
         auth::logout,
 
-        messages::send_guild_message,
-        messages::get_guild_messages,
+        guild_messages::send_guild_message,
+        guild_messages::get_guild_messages,
 
         direct_messages::send_direct_message,
         direct_messages::get_direct_messages,
@@ -67,8 +67,8 @@ pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations/");
         src_backend::db::models::users::UpdateUser,
         src_backend::db::models::sessions::Session,
 
-        src_backend::db::models::messages::GuildMessage,
-        src_backend::db::models::messages::NewGuildMessage,
+        src_backend::db::models::guild_messages::GuildMessage,
+        src_backend::db::models::guild_messages::NewGuildMessage,
 
         src_backend::db::models::direct_messages::DirectMessage,
         src_backend::db::models::direct_messages::NewDirectMessage,
@@ -185,7 +185,7 @@ async fn main() -> Result<()> {
         .merge(users::routes())
         .merge(guilds::routes())
         .merge(roles::routes())
-        .merge(messages::routes())
+        .merge(guild_messages::routes())
         .merge(direct_messages::routes())
         .merge(keys::routes())
         .merge(push_tokens::routes())
