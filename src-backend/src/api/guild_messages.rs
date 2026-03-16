@@ -1,7 +1,7 @@
 use crate::api::auth_extractor::AuthUser;
 use crate::api::errors::ApiError;
 use crate::api::opaque::AppState;
-use crate::db::models::messages::{GuildMessage, NewGuildMessage};
+use crate::db::models::guild_messages::{GuildMessage, NewGuildMessage};
 use crate::db::schema::{channels, guild_members, guild_messages, sessions};
 use ApiError::Forbidden;
 use axum::extract::{Path, State};
