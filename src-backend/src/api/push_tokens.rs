@@ -31,9 +31,9 @@ pub fn routes() -> Router<AppState> {
         (status = 409, description = "duplicate Token",),
     ),
     security(("session_token" = [])),
-    tag = "pushTokens"
+    tag = "push_tokens"
 )]
-//TODO: Add proper authentication once login has been merged into master.
+// TODO: Add proper authentication once login has been merged into master.
 async fn add_push_token(
     State(pool): State<Pool>,
     Json(payload): Json<NewPushToken>,
@@ -57,12 +57,12 @@ async fn add_push_token(
     delete,
     path = "/api/push-token/{token}",
     params(("token" = String, Path, description = "The push token to be deleted")),
-    responses((status = 204, description = "token deleted")),
-    responses((status = 404, description = "token could not be found")),
+    responses((status = 204, description = "Token deleted")),
+    responses((status = 404, description = "Token could not be found")),
     security(("session_token" = [])),
-    tag = "pushTokens"
+    tag = "push_tokens"
 )]
-//TODO: Add proper authentication once login has been merged into master.
+// TODO: Add proper authentication once login has been merged into master.
 async fn remove_push_token(
     State(pool): State<Pool>,
     Path(token): Path<String>,
@@ -79,7 +79,7 @@ async fn remove_push_token(
 
     if rows_deleted == 0 {
         return Err(ApiError::NotFound(format!(
-            "Token {token_for_error} not found"
+            "Token {token_for_error} not found!"
         )));
     }
 
