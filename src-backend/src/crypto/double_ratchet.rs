@@ -23,7 +23,7 @@ use x25519_dalek::{PublicKey, StaticSecret};
 use super::kdf::{kdf_ck, kdf_rk};
 
 /// Maximum number of skipped message keys we keep before discarding.
-const MAX_SKIP: u32 = 256;
+pub const MAX_SKIP: u32 = 256;
 
 /// The ratchet state held by one party.
 ///

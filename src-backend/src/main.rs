@@ -62,8 +62,8 @@ pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations/");
         src_backend::db::models::users::UpdateUser,
         src_backend::db::models::sessions::Session,
 
-        src_backend::db::models::messages::GuildMessage,
-        src_backend::db::models::messages::NewGuildMessage,
+        src_backend::db::models::guild_messages::GuildMessage,
+        src_backend::db::models::guild_messages::NewGuildMessage,
 
         src_backend::db::models::direct_messages::DirectMessage,
         src_backend::db::models::direct_messages::NewDirectMessage,
