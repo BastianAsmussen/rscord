@@ -18,7 +18,9 @@ export default function SignIn() {
                 password: password(),
             });
 
-            console.log(`Logged in as @${user.user.handle}.`);
+            localStorage.setItem("session", JSON.stringify(user.auth.token));
+            window.location.href = "/";
+
         } catch (err) {
             console.error(err);
             setError(String(err));
