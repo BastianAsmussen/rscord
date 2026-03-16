@@ -1,11 +1,11 @@
-use std::{collections::HashMap, sync::Arc};
-
+use crate::db::models::direct_messages::DirectMessage;
 use crate::db::models::messages::GuildMessage;
 use argon2::{Argon2, password_hash::rand_core::OsRng};
 use axum::extract::FromRef;
 use chrono::{Duration, NaiveDateTime, Utc};
 use opaque_ke::{CipherSuite, Ristretto255, ServerLogin, ServerSetup, TripleDh};
 use sha2::Sha512;
+use std::{collections::HashMap, sync::Arc};
 use tokio::sync::{Mutex, broadcast};
 use tracing::warn;
 
@@ -45,8 +45,10 @@ pub struct AppState {
     pub pending_registrations: Arc<Mutex<HashMap<String, PendingRegistration>>>,
     /// In-flight login handshakes (TTL: 2 min).
     pub pending_logins: Arc<Mutex<HashMap<String, PendingLogin>>>,
-    /// The global message bus for real time events
+    /// The global message bus for real time guild events
     pub tx: broadcast::Sender<GuildMessage>,
+    /// The global message bus for real time encrypted DM events
+    pub dm_tx: broadcast::Sender<DirectMessage>,
 }
 
 impl AppState {
@@ -78,6 +80,7 @@ impl AppState {
             },
         );
         let (tx, _) = broadcast::channel(1024);
+        let (dm_tx, _) = broadcast::channel(1024);
 
         Self {
             pool,
@@ -85,6 +88,7 @@ impl AppState {
             pending_registrations: Arc::new(Mutex::new(HashMap::new())),
             pending_logins: Arc::new(Mutex::new(HashMap::new())),
             tx,
+            dm_tx,
         }
     }
 

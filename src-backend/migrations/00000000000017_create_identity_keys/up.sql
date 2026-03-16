@@ -1,0 +1,11 @@
+CREATE TABLE identity_keys
+(
+    id         BIGSERIAL PRIMARY KEY,
+    user_id    BIGINT NOT NULL UNIQUE,
+    public_key BYTEA  NOT NULL,
+
+    created_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
