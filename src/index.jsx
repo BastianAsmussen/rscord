@@ -5,10 +5,10 @@ import { Router } from "@solidjs/router";
 import "./App.css";
 
 render(
-    () => (
-        <Router>
-            <App />
-        </Router>
-    ),
-    document.getElementById("root")
+  () => (
+    <Router>
+      <App />
+    </Router>
+  ),
+  document.getElementById("root"),
 );
