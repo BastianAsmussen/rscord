@@ -4,7 +4,6 @@ use diesel_derive_enum::DbEnum;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize, DbEnum, ToSchema)]
 #[ExistingTypePath = "crate::db::schema::sql_types::RelationshipStatus"]
 pub enum RelationshipStatus {
@@ -12,7 +11,6 @@ pub enum RelationshipStatus {
     Accepted,
     Blocked,
 }
-
 
 #[derive(Debug, Serialize, Deserialize, Selectable, Queryable, ToSchema)]
 #[diesel(table_name = crate::db::schema::relationships)]

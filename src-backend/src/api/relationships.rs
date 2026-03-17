@@ -1,21 +1,24 @@
-use axum::{
-    Json, Router,
-    extract::{Path, State},
-    http::StatusCode,
-    routing::{put, post},
-};
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper, associations::HasTable};
 use crate::api::auth_extractor::AuthUser;
 use crate::api::errors::{ApiError, ErrorBody};
 use crate::api::opaque::AppState;
 use crate::db::models::relationships::{NewRelationship, Relationship, UpdateRelationship};
 use crate::db::schema::relationships;
+use axum::{
+    Json, Router,
+    extract::{Path, State},
+    http::StatusCode,
+    routing::{post, put},
+};
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper, associations::HasTable};
 
 type Pool = deadpool_diesel::postgres::Pool;
 
 pub fn routes() -> Router<AppState> {
     Router::new()
-        .route("/api/relationships", post(create_relationship).get(get_relationships))
+        .route(
+            "/api/relationships",
+            post(create_relationship).get(get_relationships),
+        )
         .route(
             "/api/relationships/{id}",
             put(update_relationship).delete(delete_relationship),
@@ -45,21 +48,22 @@ pub fn routes() -> Router<AppState> {
 pub async fn create_relationship(
     _auth: AuthUser,
     State(pool): State<Pool>,
-    Json(payload): Json<NewRelationship>
+    Json(payload): Json<NewRelationship>,
 ) -> Result<(StatusCode, Json<Relationship>), ApiError> {
     if _auth.session.user_id != payload.sender_id {
         return Err(ApiError::Forbidden(
-            "Can not create relationship with sender other then your own".into()));
+            "Can not create relationship with sender other then your own".into(),
+        ));
     }
 
     let conn = pool.get().await?;
 
-    let relationship : Relationship = conn
+    let relationship: Relationship = conn
         .interact(|conn| {
-          diesel::insert_into(relationships::dsl::relationships::table())
-              .values(payload)
-              .returning(Relationship::as_returning())
-              .get_result(conn)
+            diesel::insert_into(relationships::dsl::relationships::table())
+                .values(payload)
+                .returning(Relationship::as_returning())
+                .get_result(conn)
         })
         .await??;
 
@@ -88,8 +92,8 @@ pub async fn get_relationships(
 ) -> Result<Json<Vec<Relationship>>, ApiError> {
     let conn = pool.get().await?;
 
-    let relationships : Vec<Relationship> = conn
-        .interact(move |conn|{
+    let relationships: Vec<Relationship> = conn
+        .interact(move |conn| {
             relationships::dsl::relationships
                 .filter(relationships::dsl::sender_id.eq(&_auth.session.user_id))
                 .or_filter(relationships::dsl::receiver_id.eq(&_auth.session.user_id))
@@ -125,17 +129,19 @@ pub async fn update_relationship(
     _auth: AuthUser,
     State(pool): State<Pool>,
     Path(relationship_id): Path<i64>,
-    Json(payload): Json<UpdateRelationship>
+    Json(payload): Json<UpdateRelationship>,
 ) -> Result<Json<Relationship>, ApiError> {
     let conn = pool.get().await?;
 
-    let relationship : Relationship = conn
+    let relationship: Relationship = conn
         .interact(move |conn| {
-            diesel::update(relationships::dsl::relationships
-                .filter(relationships::dsl::id.eq(relationship_id)))
-                .set(&payload)
-                .returning(Relationship::as_returning())
-                .get_result(conn)
+            diesel::update(
+                relationships::dsl::relationships
+                    .filter(relationships::dsl::id.eq(relationship_id)),
+            )
+            .set(&payload)
+            .returning(Relationship::as_returning())
+            .get_result(conn)
         })
         .await?
         .map_err(|e| match e {
@@ -176,13 +182,18 @@ pub async fn delete_relationship(
 
     let rows_deleted: usize = conn
         .interact(move |conn| {
-            diesel::delete(relationships::dsl::relationships.filter(relationships::dsl::id.eq(relationship_id)))
-                .execute(conn)
+            diesel::delete(
+                relationships::dsl::relationships
+                    .filter(relationships::dsl::id.eq(relationship_id)),
+            )
+            .execute(conn)
         })
         .await??;
 
     if rows_deleted == 0 {
-        return Err(ApiError::NotFound(format!("relationship {relationship_id} not found")));
+        return Err(ApiError::NotFound(format!(
+            "relationship {relationship_id} not found"
+        )));
     }
 
     Ok(StatusCode::NO_CONTENT)

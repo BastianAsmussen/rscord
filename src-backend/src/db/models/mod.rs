@@ -1,11 +1,11 @@
 pub mod channels;
 pub mod channels_members;
 pub mod direct_messages;
+pub mod guild_messages;
 pub mod guilds;
 pub mod keys;
-pub mod guild_messages;
 pub mod push_tokens;
+pub mod relationships;
 pub mod roles;
 pub mod sessions;
 pub mod users;
-pub mod relationships;

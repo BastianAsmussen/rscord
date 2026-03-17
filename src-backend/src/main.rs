@@ -4,8 +4,8 @@ use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
 use rustls::crypto;
 use rustls::crypto::CryptoProvider;
 use src_backend::api::{
-    auth, direct_messages, guild_messages, guilds, keys, opaque::AppState, push_tokens, roles,
-    users, websocket, relationships,
+    auth, direct_messages, guild_messages, guilds, keys, opaque::AppState, push_tokens,
+    relationships, roles, users, websocket,
 };
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use utoipa::OpenApi;
