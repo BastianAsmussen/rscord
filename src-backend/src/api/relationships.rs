@@ -46,11 +46,11 @@ pub fn routes() -> Router<AppState> {
     tag = "relationships"
 )]
 pub async fn create_relationship(
-    _auth: AuthUser,
+    auth: AuthUser,
     State(pool): State<Pool>,
     Json(payload): Json<NewRelationship>,
 ) -> Result<(StatusCode, Json<Relationship>), ApiError> {
-    if _auth.session.user_id != payload.sender_id {
+    if auth.session.user_id != payload.sender_id {
         return Err(ApiError::Forbidden(
             "Can not create relationship with sender other then your own".into(),
         ));
@@ -87,7 +87,7 @@ pub async fn create_relationship(
     tag = "relationships"
 )]
 pub async fn get_relationships(
-    _auth: AuthUser,
+    auth: AuthUser,
     State(pool): State<Pool>,
 ) -> Result<Json<Vec<Relationship>>, ApiError> {
     let conn = pool.get().await?;
@@ -95,8 +95,8 @@ pub async fn get_relationships(
     let relationships: Vec<Relationship> = conn
         .interact(move |conn| {
             relationships::dsl::relationships
-                .filter(relationships::dsl::sender_id.eq(&_auth.session.user_id))
-                .or_filter(relationships::dsl::receiver_id.eq(&_auth.session.user_id))
+                .filter(relationships::dsl::sender_id.eq(&auth.session.user_id))
+                .or_filter(relationships::dsl::receiver_id.eq(&auth.session.user_id))
                 .load(conn)
         })
         .await??;
