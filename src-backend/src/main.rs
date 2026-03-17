@@ -4,8 +4,8 @@ use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
 use rustls::crypto;
 use rustls::crypto::CryptoProvider;
 use src_backend::api::{
-    auth, direct_messages, guild_messages, guilds, keys, opaque::AppState, push_tokens, roles,
-    users, websocket,
+    auth, direct_messages, guild_messages, guilds, keys, opaque::AppState, push_tokens,
+    relationships, roles, users, websocket,
 };
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use utoipa::OpenApi;
@@ -55,6 +55,11 @@ pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations/");
 
         push_tokens::add_push_token,
         push_tokens::remove_push_token,
+
+        relationships::create_relationship,
+        relationships::get_relationships,
+        relationships::update_relationship,
+        relationships::delete_relationship,
     ),
     components(schemas(
         src_backend::db::models::users::User,
@@ -102,6 +107,11 @@ pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations/");
         auth::OpaqueLoginFinishRequest,
 
         src_backend::api::errors::ErrorBody,
+
+
+        src_backend::db::models::relationships::Relationship,
+        src_backend::db::models::relationships::NewRelationship,
+        src_backend::db::models::relationships::UpdateRelationship,
     )),
     modifiers(&SecurityAddon),
     tags(
@@ -180,6 +190,7 @@ async fn main() -> Result<()> {
         .merge(keys::routes())
         .merge(push_tokens::routes())
         .merge(websocket::routes())
+        .merge(relationships::routes())
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
         .with_state(state);
 

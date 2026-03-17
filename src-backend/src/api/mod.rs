@@ -8,6 +8,7 @@ pub mod keys;
 pub mod opaque;
 pub mod password;
 pub mod push_tokens;
+pub mod relationships;
 pub mod roles;
 pub mod users;
 pub mod websocket;
