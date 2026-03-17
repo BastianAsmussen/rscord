@@ -1,5 +1,5 @@
 use crate::db::models::direct_messages::DirectMessage;
-use crate::db::models::messages::GuildMessage;
+use crate::db::models::guild_messages::GuildMessage;
 use argon2::{Argon2, password_hash::rand_core::OsRng};
 use axum::extract::FromRef;
 use chrono::{Duration, NaiveDateTime, Utc};

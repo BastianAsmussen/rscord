@@ -18,8 +18,8 @@ use serde_json::{Value, json};
 use tower::ServiceExt;
 
 use src_backend::api::{
-    auth, direct_messages, guilds, keys, messages, opaque::AppState, push_tokens, roles, users,
-    websocket,
+    auth, direct_messages, guild_messages, guilds, keys, opaque::AppState, push_tokens, roles,
+    users, websocket,
 };
 use src_backend::db::models::sessions::NewSession;
 use src_backend::db::models::users::{NewUser, User};
@@ -101,7 +101,7 @@ fn app(state: AppState) -> Router {
         .merge(users::routes())
         .merge(guilds::routes())
         .merge(roles::routes())
-        .merge(messages::routes())
+        .merge(guild_messages::routes())
         .merge(direct_messages::routes())
         .merge(keys::routes())
         .merge(push_tokens::routes())
