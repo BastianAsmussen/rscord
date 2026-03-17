@@ -18,12 +18,13 @@ jobs:
         env:
           DEPLOY_DIR: ${{ secrets.HETZNER_DEPLOY_DIR }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          OPAQUE_SERVER_SETUP: ${{ secrets.OPAQUE_SERVER_SETUP }}
           SERVER_PORT: ${{ secrets.SERVER_PORT }}
         with:
           host: ${{ secrets.HETZNER_HOST }}
           username: ${{ secrets.HETZNER_USER }}
           key: ${{ secrets.HETZNER_SSH_KEY }}
-          envs: DEPLOY_DIR,DB_PASSWORD,SERVER_PORT
+          envs: DEPLOY_DIR,DB_PASSWORD,OPAQUE_SERVER_SETUP,SERVER_PORT
           script: |
             set -e
 
@@ -42,6 +43,7 @@ jobs:
             chmod 644 db/password.txt
 
             printf 'DATABASE_URL=postgres://postgres:%s@db:5432/rscord\n' "${DB_PASSWORD}" > .env
+            printf 'OPAQUE_SERVER_SETUP=%s\n' "${OPAQUE_SERVER_SETUP}" >> .env
             printf 'SERVER_PORT=%s\n' "${SERVER_PORT}" >> .env
             chmod 644 .env
 
