@@ -52,10 +52,10 @@ jobs:
             chmod 644 fcm-service-account.json
 
             mkdir -p nginx/ssl
-            echo $SSL_KEY > nginx/ssl/nginx.key
+            printf '%s' "${SSL_KEY}" > nginx/ssl/nginx.key
             chmod 600 nginx/ssl/nginx.key
 
-            echo $SSL_CERT > nginx/ssl/nginx.crt
+            printf '%s' "${SSL_CERT}" > nginx/ssl/nginx.crt
             chmod 644 nginx/ssl/nginx.crt
 
             docker compose up --build -d
