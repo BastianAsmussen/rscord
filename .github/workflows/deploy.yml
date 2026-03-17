@@ -18,14 +18,15 @@ jobs:
         env:
           DEPLOY_DIR: ${{ secrets.HETZNER_DEPLOY_DIR }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          SERVER_PORT: ${{ secrets.SERVER_PORT }}
           OPAQUE_SERVER_SETUP: ${{ secrets.OPAQUE_SERVER_SETUP }}
           FIREBASE_API_KEY: ${{ secrets.FIREBASEAPIKEY }}
+          SSL_KEY: ${{ secrets.SSL_KEY }}
+          SSL_CERT: ${{ secrets.SSL_CERT }}
         with:
           host: ${{ secrets.HETZNER_HOST }}
           username: ${{ secrets.HETZNER_USER }}
           key: ${{ secrets.HETZNER_SSH_KEY }}
-          envs: DEPLOY_DIR,DB_PASSWORD,SERVER_PORT,OPAQUE_SERVER_SETUP,FIREBASE_API_KEY
+          envs: DEPLOY_DIR,DB_PASSWORD,OPAQUE_SERVER_SETUP,FIREBASE_API_KEY,SSL_KEY,SSL_CERT
           script: |
             set -e
 
@@ -45,10 +46,16 @@ jobs:
 
             printf 'DATABASE_URL=postgres://postgres:%s@db:5432/rscord\n' "${DB_PASSWORD}" > .env
             printf 'OPAQUE_SERVER_SETUP=%s\n' "${OPAQUE_SERVER_SETUP}" >> .env
-            printf 'SERVER_PORT=%s\n' "${SERVER_PORT}" >> .env
             chmod 644 .env
 
             echo $FIREBASE_API_KEY > fcm-service-account.json
             chmod 644 fcm-service-account.json
+
+            mkdir -p nginx/ssl
+            echo $SSL_KEY > nginx/ssl/nginx.key
+            chmod 600 nginx/ssl/nginx.key
+
+            echo $SSL_CERT > nginx/ssl/nginx.crt
+            chmod 644 nginx/ssl/nginx.crt
 
             docker compose up --build -d
