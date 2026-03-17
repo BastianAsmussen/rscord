@@ -38,9 +38,9 @@ jobs:
 
             mkdir -p db
             printf '%s' "${DB_PASSWORD}" > db/password.txt
-            chmod 600 db/password.txt
+            chmod 644 db/password.txt
 
             printf 'DATABASE_URL=postgres://postgres:%s@db:5432/rscord\n' "${DB_PASSWORD}" > .env
-            chmod 600 .env
+            chmod 644 .env
 
             docker compose up --build -d
