@@ -1,0 +1,32 @@
+name: deploy
+
+on:
+  workflow_run:
+    workflows: [test-backend]
+    types: [completed]
+    branches: [master]
+
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    permissions: {}
+
+    steps:
+      - name: Deploy to Hetzner
+        uses: appleboy/ssh-action@v1
+        env:
+          DEPLOY_DIR: ${{ secrets.HETZNER_DEPLOY_DIR }}
+        with:
+          host: ${{ secrets.HETZNER_HOST }}
+          username: ${{ secrets.HETZNER_USER }}
+          key: ${{ secrets.HETZNER_SSH_KEY }}
+          envs: DEPLOY_DIR
+          script: |
+            set -e
+
+            cd "${DEPLOY_DIR:-$HOME/rscord}"
+            git pull --ff-only origin master
+
+            cd src-backend
+            docker compose up -d --build
