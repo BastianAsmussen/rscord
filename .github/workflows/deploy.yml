@@ -17,11 +17,12 @@ jobs:
         uses: appleboy/ssh-action@v1
         env:
           DEPLOY_DIR: ${{ secrets.HETZNER_DEPLOY_DIR }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
         with:
           host: ${{ secrets.HETZNER_HOST }}
           username: ${{ secrets.HETZNER_USER }}
           key: ${{ secrets.HETZNER_SSH_KEY }}
-          envs: DEPLOY_DIR
+          envs: DEPLOY_DIR,DB_PASSWORD
           script: |
             set -e
 
@@ -34,4 +35,12 @@ jobs:
             git pull --ff-only origin master
 
             cd src-backend
+
+            mkdir -p db
+            printf '%s' "${DB_PASSWORD}" > db/password.txt
+            chmod 600 db/password.txt
+
+            printf 'DATABASE_URL=postgres://postgres:%s@db:5432/rscord\n' "${DB_PASSWORD}" > .env
+            chmod 600 .env
+
             docker compose up --build -d
