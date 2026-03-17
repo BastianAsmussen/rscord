@@ -25,8 +25,13 @@ jobs:
           script: |
             set -e
 
-            cd "${DEPLOY_DIR:-$HOME/rscord}"
+            REPO_DIR="${DEPLOY_DIR:-$HOME/rscord}"
+            if [ ! -d "$REPO_DIR" ]; then
+              git clone https://github.com/${{ github.repository }} "$REPO_DIR"
+            fi
+
+            cd "$REPO_DIR"
             git pull --ff-only origin master
 
             cd src-backend
-            docker compose up -d --build
+            docker compose up --build -d
