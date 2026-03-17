@@ -45,3 +45,6 @@ rand_core_06 = { package = "rand_core", version = "0.6", features = ["getrandom"
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }
 http-body-util = "0.1"
+
+[[bin]]
+name = "gen-opaque-setup"
