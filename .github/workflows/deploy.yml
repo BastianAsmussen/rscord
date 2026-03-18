@@ -22,6 +22,7 @@ jobs:
           FIREBASE_API_KEY: ${{ secrets.FIREBASEAPIKEY }}
           SSL_KEY: ${{ secrets.SSL_KEY }}
           SSL_CERT: ${{ secrets.SSL_CERT }}
+          SSL_CF_CERT: ${{ secrets.SSL_CF_CERT }}
         with:
           host: ${{ secrets.HETZNER_HOST }}
           username: ${{ secrets.HETZNER_USER }}
@@ -53,9 +54,11 @@ jobs:
 
             mkdir -p nginx/ssl
             printf '%s' "${SSL_KEY}" > nginx/ssl/nginx.key
-            chmod 600 nginx/ssl/nginx.key
-
             printf '%s' "${SSL_CERT}" > nginx/ssl/nginx.crt
+            printf '%s' "${SSL_CF_CERT}" > nginx/ssl/cloudflare.crt
+
+            chmod 600 nginx/ssl/nginx.key
             chmod 644 nginx/ssl/nginx.crt
+            chmod 644 nginx/ssl/cloudflare.crt
 
             docker compose up --build -d
