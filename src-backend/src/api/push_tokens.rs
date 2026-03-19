@@ -4,7 +4,7 @@ use crate::api::opaque::AppState;
 use crate::db::{models::push_tokens::NewPushToken, schema::push_tokens};
 use axum::routing::delete;
 use axum::{
-    Json, Router,
+    Router,
     extract::{Path, State},
     http::StatusCode,
     routing::post,
@@ -16,7 +16,7 @@ type Pool = deadpool_diesel::postgres::Pool;
 /// Returns the `/api/push-token` create and delete routes for push token.
 pub fn routes() -> Router<AppState> {
     Router::new()
-        .route("/api/push-token", post(add_push_token))
+        .route("/api/push-token/{token}", post(add_push_token))
         .route("/api/push-token/{token}", delete(remove_push_token))
 }
 
@@ -25,8 +25,8 @@ pub fn routes() -> Router<AppState> {
 /// Add a push token.
 #[utoipa::path(
     post,
-    path = "/api/push-token",
-    request_body = NewPushToken,
+    path = "/api/push-token/{token}",
+    params(("token" = String, Path, description = "The push token to be added")),
     responses(
         (status = 204, description = "push token uploaded successfully",),
         (status = 409, description = "duplicate Token",),
@@ -34,23 +34,21 @@ pub fn routes() -> Router<AppState> {
     security(("session_token" = [])),
     tag = "push_tokens"
 )]
-// TODO: Add proper authentication once login has been merged into master.
 async fn add_push_token(
     auth: AuthUser,
     State(pool): State<Pool>,
-    Json(payload): Json<NewPushToken>,
+    Path(token): Path<String>,
 ) -> Result<StatusCode, ApiError> {
-    if auth.session.user_id != payload.user_id {
-        return Err(ApiError::Forbidden(
-            "Unable create push token for other users".into(),
-        ));
-    }
-
     let conn = pool.get().await?;
+
+    let new_token = NewPushToken {
+        user_id: auth.session.user_id,
+        token,
+    };
 
     conn.interact(|conn| {
         diesel::insert_into(push_tokens::dsl::push_tokens::table())
-            .values(payload)
+            .values(new_token)
             .execute(conn)
     })
     .await??;
@@ -70,7 +68,6 @@ async fn add_push_token(
     security(("session_token" = [])),
     tag = "push_tokens"
 )]
-// TODO: Add proper authentication once login has been merged into master.
 async fn remove_push_token(
     _auth: AuthUser,
     State(pool): State<Pool>,
