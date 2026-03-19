@@ -9,6 +9,7 @@ use axum::{
     routing::post,
 };
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, associations::HasTable};
+use crate::api::auth_extractor::AuthUser;
 
 type Pool = deadpool_diesel::postgres::Pool;
 
@@ -35,9 +36,16 @@ pub fn routes() -> Router<AppState> {
 )]
 // TODO: Add proper authentication once login has been merged into master.
 async fn add_push_token(
+    auth: AuthUser,
     State(pool): State<Pool>,
     Json(payload): Json<NewPushToken>,
 ) -> Result<StatusCode, ApiError> {
+    if auth.session.user_id != payload.user_id {
+        return Err(ApiError::Forbidden(
+            "Unable create push token for other users".into(),
+        ));
+    }
+
     let conn = pool.get().await?;
 
     conn.interact(|conn| {
@@ -64,6 +72,7 @@ async fn add_push_token(
 )]
 // TODO: Add proper authentication once login has been merged into master.
 async fn remove_push_token(
+    _auth: AuthUser,
     State(pool): State<Pool>,
     Path(token): Path<String>,
 ) -> Result<StatusCode, ApiError> {
