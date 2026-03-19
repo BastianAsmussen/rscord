@@ -48,7 +48,10 @@ pub fn get_token(state: &tauri::State<'_, AppClientState>) -> String {
 /// Panics if the token storage is locked by a thread that crashed.
 pub fn restore_token(app: &AppHandle, state: &tauri::State<'_, AppClientState>) {
     if let Ok(store) = app.store(STORE_FILE) {
-        if let Some(token) = store.get(TOKEN_KEY).and_then(|v| v.as_str().map(String::from)) {
+        if let Some(token) = store
+            .get(TOKEN_KEY)
+            .and_then(|v| v.as_str().map(String::from))
+        {
             *state.token.lock().unwrap() = token;
         }
     }
