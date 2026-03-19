@@ -38,7 +38,10 @@ pub fn run() {
             Ok(())
         })
         .manage(AppClientState {
-            client: reqwest::Client::new(),
+            client: reqwest::ClientBuilder::new()
+                .danger_accept_invalid_certs(true)
+                .build()
+                .expect("Failed to build HTTP client!"),
             token: String::new().into(),
         })
         .invoke_handler(tauri::generate_handler![

@@ -29,6 +29,7 @@
 
             librsvg
             webkitgtk_4_1
+            openssl
           ];
 
           env.RUST_SRC_PATH = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";

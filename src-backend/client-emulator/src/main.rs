@@ -119,8 +119,8 @@ fn main() -> Result<()> {
         read_password().context("Failed to read password from stdin")?
     };
 
-     run_register(&args.server, &args.email, &args.handle, password.as_bytes())
-         .map_err(|e| anyhow!("Registration failed: {e:#}"))?;
+    run_register(&args.server, &args.email, &args.handle, password.as_bytes())
+        .map_err(|e| anyhow!("Registration failed: {e:#}"))?;
     // run_login(&args.server, &args.email, password.as_bytes())
     //     .map_err(|e| anyhow!("Login failed: {e:#}"))?;
 
@@ -128,7 +128,10 @@ fn main() -> Result<()> {
 }
 
 fn run_register(server: &str, email: &str, handle: &str, password: &[u8]) -> Result<()> {
-    let client = Client::new();
+    let client = ClientBuilder::new()
+        .danger_accept_invalid_certs(true)
+        .build()
+        .context("Failed to build Reqwest client")?;
 
     let mut client_rng = OsRng;
     let client_registration_start =
@@ -204,6 +207,7 @@ fn run_register(server: &str, email: &str, handle: &str, password: &[u8]) -> Res
 fn run_login(server: &str, email: &str, password: &[u8]) -> Result<()> {
     let cookie_jar = Arc::new(Jar::default());
     let client = ClientBuilder::new()
+        .danger_accept_invalid_certs(true)
         .cookie_provider(cookie_jar.clone())
         .build()
         .context("Failed to build Reqwest client")?;

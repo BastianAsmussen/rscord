@@ -24,9 +24,13 @@
             nativeBuildInputs = [
               rustup
               rustPlatform.bindgenHook
+              pkgs.pkg-config
             ];
 
-            buildInputs = with pkgs; [postgresql_18.lib];
+            buildInputs = with pkgs; [
+              postgresql_18.lib
+              openssl
+            ];
 
             RUSTC_VERSION = overrides.toolchain.channel;
             shellHook = ''
