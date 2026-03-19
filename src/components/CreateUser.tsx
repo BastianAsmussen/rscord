@@ -1,6 +1,6 @@
 import { createSignal } from "solid-js";
 import type { JSX } from "solid-js";
-import { Modal } from "./Modal";
+import Modal from "./Modal";
 import { invoke } from "@tauri-apps/api/core";
 
 export function CreateUser() {
