@@ -2,9 +2,7 @@ pub mod api;
 
 use crate::api::{
     auth::{log_in, sign_up},
-    guilds::get_guild_channels,
-    guilds::get_guild_members,
-    guilds::list_my_guilds,
+    guilds::{create_guild, get_guild_channels, get_guild_members, list_my_guilds, join_guild, create_channel, leave_guild, delete_guild},
     messages::get_messages,
     messages::send_message,
     push_token::add_push_token,
@@ -14,7 +12,6 @@ use crate::api::{
 };
 use std::sync::Mutex;
 
-// TODO: update with real login logic and not use of session token.
 pub struct AppClientState {
     pub client: reqwest::Client,
     pub token: Mutex<String>,
@@ -34,7 +31,6 @@ pub fn run() {
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_websocket::init())
         .setup(|app| {
-            let app_handle = app.handle().clone();
             Ok(())
         })
         .manage(AppClientState {
@@ -42,7 +38,7 @@ pub fn run() {
                 .danger_accept_invalid_certs(true)
                 .build()
                 .expect("Failed to build HTTP client!"),
-            token: String::new().into(),
+            token: Mutex::new(String::new()),
         })
         .invoke_handler(tauri::generate_handler![
             add_push_token,
@@ -50,6 +46,11 @@ pub fn run() {
             log_in,
             send_message,
             list_my_guilds,
+            create_guild,
+            join_guild,
+            create_channel,
+            leave_guild,
+            delete_guild,
             get_guild_members,
             get_guild_channels,
             get_messages,

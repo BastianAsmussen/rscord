@@ -1,14 +1,12 @@
-import { Portal } from "solid-js/web";
-import { onCleanup, onMount } from "solid-js";
-import type { Accessor, JSX } from "solid-js";
+import {Portal} from "solid-js/web";
+import type {Accessor, JSX} from "solid-js";
+import {onCleanup, onMount} from "solid-js";
 
 type ModalProps = {
-    open: Accessor<boolean>;
-    onClose?: () => void;
-    children: JSX.Element | JSX.Element[];
+    open: Accessor<boolean>; onClose?: () => void; children: JSX.Element | JSX.Element[];
 };
 
-export function Modal(props: ModalProps) {
+function Modal(props: ModalProps) {
     const mount = document.getElementById("modal") ?? document.body;
 
     const handleKey = (e: KeyboardEvent) => {
@@ -25,10 +23,8 @@ export function Modal(props: ModalProps) {
         window.removeEventListener("keydown", handleKey);
     });
 
-    return (
-        <>
-            {props.open() && (
-                <Portal mount={mount} children={0}>
+    return (<>
+            {props.open() && (<Portal mount={mount}>
                     <div
                         class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4 sm:px-6 py-8"
                         onClick={props.onClose}
@@ -60,8 +56,8 @@ export function Modal(props: ModalProps) {
                             {props.children}
                         </div>
                     </div>
-                </Portal>
-            )}
-        </>
-    );
+                </Portal>)}
+        </>);
 }
+
+export default Modal

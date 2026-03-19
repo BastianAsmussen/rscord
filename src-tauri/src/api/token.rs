@@ -1,6 +1,10 @@
 ﻿use crate::AppClientState;
+use serde::{Deserialize, Serialize};
 
-// TODO: This is just a temp. file for testing with tokens, needs to be using auth in the future.
+#[derive(Serialize, Deserialize)]
+struct SessionWrapper {
+    token: String,
+}
 
 /// Sets the session token.
 ///
@@ -8,9 +12,9 @@
 ///
 /// Panics if the token storage is locked by a thread that crashed.
 #[tauri::command]
-pub fn set_token(token: String, state: tauri::State<'_, AppClientState>) {
+pub fn set_token(token_json: String, state: tauri::State<'_, AppClientState>) {
     let mut token_lock = state.token.lock().unwrap();
-    *token_lock = token;
+    *token_lock = token_json;
 }
 
 /// Removes the session token.
@@ -29,6 +33,11 @@ pub fn remove_token(state: tauri::State<'_, AppClientState>) {
 /// # Panics
 ///
 /// Panics if the token storage is locked by a thread that crashed.
+#[must_use]
 pub fn get_token(state: &tauri::State<'_, AppClientState>) -> String {
-    state.token.lock().unwrap().clone()
+    let lock = state.token.lock().unwrap();
+
+    serde_json::from_str::<SessionWrapper>(&lock)
+        .map(|wrapper| wrapper.token)
+        .unwrap_or_default()
 }

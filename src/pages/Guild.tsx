@@ -36,6 +36,15 @@ export default function GuildPage() {
     const [showMembers, setShowMembers] = createSignal(false);
 
     onMount(async () => {
+        const sessionRaw = localStorage.getItem("session");
+
+        if (sessionRaw) {
+            await invoke("set_token", { tokenJson: sessionRaw });
+        } else {
+            console.error("No session found in localStorage");
+            return;
+        }
+
         await invoke("init_websocket");
 
         const unlisten = await listen<string>("new-message", (event) => {
@@ -49,16 +58,29 @@ export default function GuildPage() {
             }
         });
 
+        await refreshGuilds()
         onCleanup(() => unlisten());
+    });
 
+    const refreshGuilds = async () => {
         try {
             const data: Guild[] = await invoke("list_my_guilds");
             setGuilds(data);
-            if (data.length > 0) setActiveGuild(data[0].id);
         } catch (e) {
-            console.error("Failed to load guilds:", e);
+            console.error("Failed to refresh guilds:", e);
         }
-    });
+    };
+
+    const refreshChannels = async () => {
+        const gid = activeGuild();
+        if (!gid) return;
+        try {
+            const newChannels = await invoke<Channel[]>("get_guild_channels", { id: gid });
+            setChannels(newChannels);
+        } catch (e) {
+            console.error("Refresh channels failed:", e);
+        }
+    };
 
     const memberDisplayList = createMemo(() =>
         members().map(m => ({
@@ -136,13 +158,16 @@ export default function GuildPage() {
             guilds={guilds()}
             activeGuild={activeGuild() ?? 0}
             onSelect={selectGuild}
+            onGuildCreated={refreshGuilds}
         />
 
         <div class="hidden md:block shrink-0">
             <ChannelSidebar
                 channels={channels()}
                 activeChannel={activeChannel() ?? 0}
+                activeGuild={activeGuild()}
                 onSelect={selectChannel}
+                onChannelCreated={refreshChannels}
                 title={activeGuildName()}
             />
         </div>
@@ -203,7 +228,10 @@ export default function GuildPage() {
                 <ChannelSidebar
                     channels={channels()}
                     activeChannel={activeChannel() ?? 0}
+                    activeGuild={activeGuild()}
                     onSelect={selectChannel}
+                    onChannelCreated={refreshChannels}
+                    title={activeGuildName()}
                 />
             </div>
         </div>)}
