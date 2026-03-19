@@ -7,7 +7,7 @@ use opaque_ke::{
 };
 
 use reqwest::{
-    Client, ClientBuilder, Url,
+    ClientBuilder, Url,
     cookie::{CookieStore, Jar},
 };
 
@@ -15,7 +15,9 @@ use serde::{Deserialize, Serialize};
 use sha2::Sha512;
 use std::sync::Arc;
 
+use crate::AppClientState;
 use crate::api::BASE_URL;
+use crate::api::token::save_token;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RegisteredUser {
@@ -168,7 +170,12 @@ pub async fn sign_up(email: &str, handle: &str, password: &str) -> Result<Regist
 }
 
 #[tauri::command(async)]
-pub async fn log_in(email: &str, password: &str) -> Result<LoggedInUser, String> {
+pub async fn log_in(
+    email: &str,
+    password: &str,
+    app: tauri::AppHandle,
+    state: tauri::State<'_, AppClientState>,
+) -> Result<LoggedInUser, String> {
     let password = password.as_bytes();
     let cookie_jar = Arc::new(Jar::default());
     let client = ClientBuilder::new()
@@ -273,6 +280,11 @@ pub async fn log_in(email: &str, password: &str) -> Result<LoggedInUser, String>
     }
 
     let user = user_res.json().await.map_err(|e| e.to_string())?;
+
+    // Persist the token to the on-disk store and update in-memory state so
+    // subsequent Tauri commands (e.g. init_websocket) can access it without
+    // needing the frontend to round-trip it back via set_token.
+    save_token(&app, &state, &auth.token);
 
     Ok(LoggedInUser { user, auth })
 }

@@ -1,16 +1,16 @@
 pub mod api;
 
+use tauri::Manager;
+
 use crate::api::{
     auth::{log_in, sign_up},
     guilds::{
         create_channel, create_guild, delete_guild, get_guild_channels, get_guild_members,
         join_guild, leave_guild, list_my_guilds,
     },
-    messages::get_messages,
-    messages::send_message,
+    messages::{get_messages, send_message},
     push_token::add_push_token,
-    token::remove_token,
-    token::set_token,
+    token::{remove_token, restore_token, set_token},
     ws_client::init_websocket,
 };
 use std::sync::Mutex;
@@ -34,11 +34,7 @@ pub fn run() {
         .plugin(tauri_plugin_notifications::init())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_websocket::init())
-        .setup(|app| {
-            let app_handle = app.handle().clone();
-
-            Ok(())
-        })
+        .plugin(tauri_plugin_store::Builder::default().build())
         .manage(AppClientState {
             client: reqwest::ClientBuilder::new()
                 .danger_accept_invalid_certs(true)
@@ -46,6 +42,15 @@ pub fn run() {
                 .expect("Failed to build HTTP client!"),
             token: String::new().into(),
             ws_task: Mutex::new(None),
+        })
+        .setup(|app| {
+            // Restore a previously persisted session token so the backend
+            // state is ready before any command is invoked, without requiring
+            // the frontend to round-trip the token back via set_token.
+            let state = app.state::<AppClientState>();
+            restore_token(app.handle(), &state);
+
+            Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             add_push_token,

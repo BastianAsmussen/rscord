@@ -1,4 +1,5 @@
 use super::errors::ApiError;
+use crate::api::auth_extractor::AuthUser;
 use crate::api::opaque::AppState;
 use crate::db::{models::push_tokens::NewPushToken, schema::push_tokens};
 use axum::routing::delete;
@@ -9,7 +10,6 @@ use axum::{
     routing::post,
 };
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, associations::HasTable};
-use crate::api::auth_extractor::AuthUser;
 
 type Pool = deadpool_diesel::postgres::Pool;
 

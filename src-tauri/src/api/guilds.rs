@@ -1,6 +1,6 @@
-use crate::api::token::get_token;
-use crate::api::BASE_URL;
 use crate::AppClientState;
+use crate::api::BASE_URL;
+use crate::api::token::get_token;
 use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Channel {
@@ -241,7 +241,8 @@ pub async fn leave_guild(id: i64, state: tauri::State<'_, AppClientState>) -> Re
     let url = format!("{BASE_URL}/api/guilds/{id}/leave");
     let token = get_token(&state);
 
-    state.client
+    state
+        .client
         .post(url)
         .header("Authorization", format!("Bearer {token}"))
         .send()
@@ -260,7 +261,8 @@ pub async fn delete_guild(id: i64, state: tauri::State<'_, AppClientState>) -> R
     let url = format!("{BASE_URL}/api/guilds/{id}");
     let token = get_token(&state);
 
-    state.client
+    state
+        .client
         .delete(url)
         .header("Authorization", format!("Bearer {token}"))
         .send()
