@@ -2,6 +2,7 @@
 import type { JSX } from "solid-js";
 import { invoke } from "@tauri-apps/api/core";
 import { CreateUser } from "../components/CreateUser";
+import {add_push_token} from "../components/AndroidPushToken";
 
 export default function SignIn() {
     const [username, setUsername] = createSignal("");
@@ -19,6 +20,7 @@ export default function SignIn() {
             });
 
             localStorage.setItem("session", JSON.stringify({token: user.auth.token, expires: user.auth.expires}));
+            await add_push_token();
             window.location.href = "/";
 
         } catch (err) {
