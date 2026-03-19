@@ -36,7 +36,8 @@ pub fn routes() -> Router<AppState> {
         (status = 201, description = "Message sent", body = GuildMessage),
         (status = 403, description = "Forbidden")
     ),
-    params(("channel_id" = i64, Path, description = "Channel ID"))
+    params(("channel_id" = i64, Path, description = "Channel ID")),
+    security(("session_token" = [])),
 )]
 pub async fn send_guild_message(
     auth: AuthUser,

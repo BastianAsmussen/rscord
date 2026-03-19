@@ -34,7 +34,8 @@ pub fn routes() -> Router<AppState> {
         (status = 201, description = "Encrypted DM sent", body = DirectMessage),
         (status = 403, description = "Not a member of this DM channel")
     ),
-    params(("channel_id" = i64, Path, description = "DM channel ID"))
+    params(("channel_id" = i64, Path, description = "DM channel ID")),
+    security(("session_token" = [])),
 )]
 pub async fn send_direct_message(
     auth: AuthUser,
