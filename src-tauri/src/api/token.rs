@@ -1,38 +1,30 @@
 use crate::AppClientState;
-use serde::{Deserialize, Serialize};
 use tauri::AppHandle;
 use tauri_plugin_store::StoreExt;
 
 const STORE_FILE: &str = "session.json";
 const TOKEN_KEY: &str = "token";
 
-#[derive(Serialize, Deserialize)]
-struct SessionWrapper {
-    token: String,
-}
-
 /// Persists `token` to the on-disk store and updates the in-memory state.
 ///
 /// # Panics
 ///
-/// - Panics if the token storage is locked by a thread that crashed.
+/// Panics if the token storage is locked by a thread that crashed.
 pub fn save_token(app: &AppHandle, state: &tauri::State<'_, AppClientState>, token: &str) {
     *state.token.lock().unwrap() = token.to_owned();
-
     if let Ok(store) = app.store(STORE_FILE) {
         store.set(TOKEN_KEY, token);
     }
 }
 
-/// Removes the session token from both the in-memory state and the on-disk
-/// store.
+/// Removes the session token from both the in-memory state and the on-disk store.
 ///
 /// # Panics
 ///
-/// - Panics if the token storage is locked by a thread that crashed.
+/// Panics if the token storage is locked by a thread that crashed.
+#[tauri::command]
 pub fn remove_token(app: AppHandle, state: tauri::State<'_, AppClientState>) {
     *state.token.lock().unwrap() = String::new();
-
     if let Ok(store) = app.store(STORE_FILE) {
         store.delete(TOKEN_KEY);
     }
@@ -53,13 +45,10 @@ pub fn get_token(state: &tauri::State<'_, AppClientState>) -> String {
 ///
 /// # Panics
 ///
-/// - Panics if the token storage is locked by a thread that crashed.
+/// Panics if the token storage is locked by a thread that crashed.
 pub fn restore_token(app: &AppHandle, state: &tauri::State<'_, AppClientState>) {
     if let Ok(store) = app.store(STORE_FILE) {
-        if let Some(token) = store
-            .get(TOKEN_KEY)
-            .and_then(|v| v.as_str().map(String::from))
-        {
+        if let Some(token) = store.get(TOKEN_KEY).and_then(|v| v.as_str().map(String::from)) {
             *state.token.lock().unwrap() = token;
         }
     }

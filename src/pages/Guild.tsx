@@ -1,5 +1,6 @@
 import {createEffect, createMemo, createSignal, onCleanup, onMount} from "solid-js";
 import {invoke} from "@tauri-apps/api/core";
+import {useNavigate} from "@solidjs/router";
 
 import GuildSidebar from "../components/guild/GuildSidebar";
 import ChannelSidebar from "../components/guild/ChannelSidebar";
@@ -23,6 +24,7 @@ type GuildMessage = {
 };
 
 export default function GuildPage() {
+    const navigate = useNavigate();
     let ws: WebSocket | null = null;
     const [guilds, setGuilds] = createSignal<Guild[]>([]);
     const [channels, setChannels] = createSignal<Channel[]>([]);
@@ -36,7 +38,34 @@ export default function GuildPage() {
     const [showMembers, setShowMembers] = createSignal(false);
 
     onMount(async () => {
-        await invoke("init_websocket");
+        // Check that a valid (non-expired) session still exists in localStorage
+        // so we redirect to sign-in before attempting any API calls.
+        const raw = localStorage.getItem("session");
+        if (!raw) {
+            navigate("/signin");
+            return;
+        }
+        let session: { token: string; expires: string } | null = null;
+        try {
+            session = JSON.parse(raw);
+        } catch {
+            localStorage.removeItem("session");
+            navigate("/signin");
+            return;
+        }
+        if (!session?.token || new Date(session.expires) <= new Date()) {
+            localStorage.removeItem("session");
+            navigate("/signin");
+            return;
+        }
+        // The token is persisted on the Rust side (via tauri-plugin-store) and
+        // restored automatically at startup — no set_token call needed here.
+
+        try {
+            await invoke("init_websocket");
+        } catch (e) {
+            console.error("Failed to init WebSocket:", e);
+        }
 
         const unlisten = await listen<GuildMessage>("guild-message", (event) => {
             const newMessage = event.payload;
