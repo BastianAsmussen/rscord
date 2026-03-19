@@ -23,7 +23,9 @@ use src_backend::api::{
 };
 use src_backend::db::models::sessions::NewSession;
 use src_backend::db::models::users::{NewUser, User};
-use src_backend::db::schema::{sessions as sessions_schema, users as users_schema};
+use src_backend::db::schema::{
+    displayed_users as displayed_users_schema, sessions as sessions_schema, users as users_schema,
+};
 
 /// The same embedded migrations used by the production server.
 const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations/");
@@ -137,26 +139,17 @@ async fn seed_user(pool: &deadpool_diesel::postgres::Pool, email: &str, handle: 
                 .get_result(conn)
                 .expect("insert user");
 
-            // Create displayed_users entry (required FK for guild_messages and
-            // direct_messages). The displayed_users.id must equal users.id
-            // because the API writes `author_id = user_id` when inserting
-            // messages, and author_id FK points to displayed_users(id).
+            // Create the corresponding displayed_users row so the FK
+            // constraints on guild_messages.author_id and
+            // direct_messages.author_id are satisfied.
             let escaped_handle = handle_owned.replace('\'', "''");
 
             conn.batch_execute(&format!(
-                "INSERT INTO displayed_users (id, user_id, display_name) \
-                 VALUES ({}, {}, '{escaped_handle}') \
-                 ON CONFLICT (id) DO NOTHING;",
-                user.id, user.id
-            ))
-            .expect("insert displayed_user");
-
-            // Ensure the sequence stays ahead of manually inserted IDs.
-            conn.batch_execute(&format!(
-                "SELECT setval('displayed_users_id_seq', GREATEST(nextval('displayed_users_id_seq'), {}));",
+                "INSERT INTO displayed_users (user_id, display_name) \
+                 VALUES ({}, '{escaped_handle}');",
                 user.id
             ))
-            .expect("fix sequence");
+            .expect("insert displayed_user");
 
             user
         })
@@ -397,6 +390,49 @@ async fn delete_user() {
     let req = get_req(&format!("/api/users/{target_id}"), &actor_token);
     let resp = app(state).oneshot(req).await.expect("oneshot");
     assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn delete_user_anonymizes_display_profile() {
+    let pool = test_pool("delete_user_anon").await;
+    let (target_id, _) = seed_authed_user(&pool, "anon@test.com", "real_handle").await;
+    let (_, actor_token) = seed_authed_user(&pool, "actor_anon@test.com", "actor_anon").await;
+
+    let state = test_state(pool.clone());
+
+    let req = delete_req(&format!("/api/users/{target_id}"), &actor_token);
+    let resp = app(state).oneshot(req).await.expect("oneshot");
+    assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+
+    // The displayed_users row must still exist (message history preserved),
+    // with user_id nulled by the FK cascade and display_name anonymized.
+    let conn = pool.get().await.expect("conn");
+    let (stored_user_id, stored_display_name): (Option<i64>, String) = conn
+        .interact(move |conn| {
+            use diesel::prelude::*;
+            displayed_users_schema::table
+                .filter(
+                    displayed_users_schema::display_name.eq(format!("Deleted User {target_id}")),
+                )
+                .select((
+                    displayed_users_schema::user_id,
+                    displayed_users_schema::display_name,
+                ))
+                .first(conn)
+        })
+        .await
+        .expect("interact")
+        .expect("displayed_users row must survive user deletion");
+
+    assert!(
+        stored_user_id.is_none(),
+        "user_id FK should be NULL after deletion"
+    );
+    assert_eq!(
+        stored_display_name,
+        format!("Deleted User {target_id}"),
+        "display_name should be anonymized"
+    );
 }
 
 // Guild lifecycle.
@@ -925,7 +961,7 @@ async fn dm_rejects_invalid_nonce_length() {
 #[tokio::test]
 async fn push_token_add_and_remove() {
     let pool = test_pool("push_tokens").await;
-    let (user_id, token) = seed_authed_user(&pool, "push@test.com", "pusher").await;
+    let (user_id, _) = seed_authed_user(&pool, "push@test.com", "pusher").await;
 
     let state = test_state(pool);
 
@@ -934,7 +970,6 @@ async fn push_token_add_and_remove() {
         .uri("/api/push-token")
         .method("POST")
         .header("Content-Type", "application/json")
-        .header("Authorization", format!("Bearer {token}"))
         .body(Body::from(
             serde_json::to_vec(&json!({
                 "user_id": user_id,
@@ -950,7 +985,6 @@ async fn push_token_add_and_remove() {
     let req = Request::builder()
         .uri("/api/push-token/test-fcm-token-0123456789abcdef")
         .method("DELETE")
-        .header("Authorization", format!("Bearer {token}"))
         .body(Body::empty())
         .expect("req");
     let resp = app(state.clone()).oneshot(req).await.expect("oneshot");
@@ -960,7 +994,6 @@ async fn push_token_add_and_remove() {
     let req = Request::builder()
         .uri("/api/push-token/test-fcm-token-0123456789abcdef")
         .method("DELETE")
-        .header("Authorization", format!("Bearer {token}"))
         .body(Body::empty())
         .expect("req");
     let resp = app(state).oneshot(req).await.expect("oneshot");

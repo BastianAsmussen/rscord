@@ -9,7 +9,7 @@ use axum::{
 use axum_extra::extract::cookie::{Cookie, CookieJar};
 use chrono::{Duration, NaiveDateTime, Utc};
 use diesel::{
-    ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl, SelectableHelper,
+    Connection, ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl, SelectableHelper,
     associations::HasTable,
 };
 use opaque_ke::{
@@ -27,7 +27,10 @@ use crate::{
             sessions::NewSession,
             users::{NewUser, User},
         },
-        schema::{sessions as sessions_schema, users as users_schema},
+        schema::{
+            displayed_users as displayed_users_schema, sessions as sessions_schema,
+            users as users_schema,
+        },
     },
 };
 
@@ -194,10 +197,25 @@ pub async fn register_finish(
 
     let user: User = conn
         .interact(|conn| {
-            diesel::insert_into(users_schema::dsl::users::table())
-                .values(new_user)
-                .returning(User::as_returning())
-                .get_result(conn)
+            conn.transaction(|conn| -> Result<User, diesel::result::Error> {
+                let user: User = diesel::insert_into(users_schema::dsl::users::table())
+                    .values(new_user)
+                    .returning(User::as_returning())
+                    .get_result(conn)?;
+
+                // Create the corresponding displayed_users row so the FK
+                // constraints on guild_messages.author_id and
+                // direct_messages.author_id are satisfied from the moment the
+                // user is created.
+                diesel::insert_into(displayed_users_schema::table)
+                    .values((
+                        displayed_users_schema::user_id.eq(Some(user.id)),
+                        displayed_users_schema::display_name.eq(&user.handle),
+                    ))
+                    .execute(conn)?;
+
+                Ok(user)
+            })
         })
         .await??;
 

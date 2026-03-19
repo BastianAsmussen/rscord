@@ -7,7 +7,7 @@ CREATE TYPE user_status AS ENUM(
 
 CREATE TABLE displayed_users(
     id BIGSERIAL PRIMARY KEY,
-    user_id BIGINT NULL,
+    user_id BIGINT NULL UNIQUE,
     display_name VARCHAR(32) NOT NULL,
     icon_url VARCHAR(255) NULL,
     status user_status NOT NULL DEFAULT 'online',

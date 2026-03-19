@@ -2,7 +2,7 @@ use crate::api::auth_extractor::AuthUser;
 use crate::api::errors::ApiError;
 use crate::api::opaque::AppState;
 use crate::db::models::direct_messages::{DirectMessage, NewDirectMessage};
-use crate::db::schema::{channels, channels_members, direct_messages};
+use crate::db::schema::{channels, channels_members, direct_messages, displayed_users};
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::routing::{get, post};
@@ -78,9 +78,16 @@ pub async fn send_direct_message(
                 return Err(diesel::result::Error::RollbackTransaction);
             }
 
+            // Resolve the displayed_users.id for this user (the FK target for
+            // direct_messages.author_id). Created atomically at registration.
+            let displayed_user_id: i64 = displayed_users::table
+                .filter(displayed_users::user_id.eq(user_id))
+                .select(displayed_users::id)
+                .first::<i64>(conn)?;
+
             diesel::insert_into(direct_messages::table)
                 .values((
-                    direct_messages::author_id.eq(user_id),
+                    direct_messages::author_id.eq(displayed_user_id),
                     direct_messages::channel_id.eq(channel_id),
                     direct_messages::reply_to_id.eq(reply_to_id),
                     direct_messages::ciphertext.eq(&ciphertext_bytes),
