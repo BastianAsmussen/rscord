@@ -4,16 +4,23 @@ use crate::api::token::get_token;
 use crate::AppClientState;
 
 #[tauri::command]
+//TODO: add proper authentication once login has been merged into master
 pub async fn add_push_token(
     state: tauri::State<'_, AppClientState>,
+    user_id: i32,
     token: &str
     ) -> Result<(), String> {
-    let request_url = format!("{BASE_URL}/api/push-token/{token}");
+    let request_url = format!("{base_url}/api/push-token", base_url = BASE_URL);
     let token = get_token(&state);
+    let body = json!({
+        "user_id": user_id,
+        "token": token
+    });
 
     let response = reqwest::Client::new()
         .post(request_url)
         .header("Authorization", format!("Bearer {token}"))
+        .json(&body)
         .send()
         .await;
 
