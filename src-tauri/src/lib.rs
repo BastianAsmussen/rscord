@@ -1,5 +1,7 @@
 pub mod api;
 
+use tauri::Manager;
+
 use crate::api::{
     auth::{log_in, sign_up},
     guilds::get_guild_channels,
