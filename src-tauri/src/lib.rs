@@ -4,14 +4,13 @@ use tauri::Manager;
 
 use crate::api::{
     auth::{log_in, sign_up},
-    guilds::get_guild_channels,
-    guilds::get_guild_members,
-    guilds::list_my_guilds,
-    messages::get_messages,
-    messages::send_message,
+    guilds::{
+        create_channel, create_guild, delete_guild, get_guild_channels, get_guild_members,
+        join_guild, leave_guild, list_my_guilds,
+    },
+    messages::{get_messages, send_message},
     push_token::add_push_token,
-    token::remove_token,
-    token::restore_token,
+    token::{remove_token, restore_token},
     ws_client::init_websocket,
 };
 use std::sync::Mutex;
@@ -59,6 +58,11 @@ pub fn run() {
             log_in,
             send_message,
             list_my_guilds,
+            create_guild,
+            join_guild,
+            create_channel,
+            leave_guild,
+            delete_guild,
             get_guild_members,
             get_guild_channels,
             get_messages,
