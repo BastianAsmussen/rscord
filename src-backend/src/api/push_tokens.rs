@@ -1,22 +1,22 @@
 use super::errors::ApiError;
-use crate::api::auth_extractor::AuthUser;
 use crate::api::opaque::AppState;
 use crate::db::{models::push_tokens::NewPushToken, schema::push_tokens};
 use axum::routing::delete;
 use axum::{
-    Router,
+    Json, Router,
     extract::{Path, State},
     http::StatusCode,
     routing::post,
 };
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, associations::HasTable};
+use crate::api::auth_extractor::AuthUser;
 
 type Pool = deadpool_diesel::postgres::Pool;
 
 /// Returns the `/api/push-token` create and delete routes for push token.
 pub fn routes() -> Router<AppState> {
     Router::new()
-        .route("/api/push-token/{token}", post(add_push_token))
+        .route("/api/push-token", post(add_push_token))
         .route("/api/push-token/{token}", delete(remove_push_token))
 }
 
@@ -34,21 +34,23 @@ pub fn routes() -> Router<AppState> {
     security(("session_token" = [])),
     tag = "push_tokens"
 )]
+// TODO: Add proper authentication once login has been merged into master.
 async fn add_push_token(
     auth: AuthUser,
     State(pool): State<Pool>,
-    Path(token): Path<String>,
+    Json(payload): Json<NewPushToken>,
 ) -> Result<StatusCode, ApiError> {
-    let conn = pool.get().await?;
+    if auth.session.user_id != payload.user_id {
+        return Err(ApiError::Forbidden(
+            "Unable create push token for other users".into(),
+        ));
+    }
 
-    let new_token = NewPushToken {
-        user_id: auth.session.user_id,
-        token,
-    };
+    let conn = pool.get().await?;
 
     conn.interact(|conn| {
         diesel::insert_into(push_tokens::dsl::push_tokens::table())
-            .values(new_token)
+            .values(payload)
             .execute(conn)
     })
     .await??;
@@ -68,6 +70,7 @@ async fn add_push_token(
     security(("session_token" = [])),
     tag = "push_tokens"
 )]
+// TODO: Add proper authentication once login has been merged into master.
 async fn remove_push_token(
     _auth: AuthUser,
     State(pool): State<Pool>,
