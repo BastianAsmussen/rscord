@@ -931,17 +931,11 @@ async fn push_token_add_and_remove() {
 
     // Add push token.
     let req = Request::builder()
-        .uri("/api/push-token")
+        .uri("/api/push-token/test-fcm-token-0123456789abcdef")
         .method("POST")
         .header("Content-Type", "application/json")
         .header("Authorization", format!("Bearer {token}"))
-        .body(Body::from(
-            serde_json::to_vec(&json!({
-                "user_id": user_id,
-                "token": "test-fcm-token-0123456789abcdef"
-            }))
-            .expect("json"),
-        ))
+        .body(Body::empty())
         .expect("req");
     let resp = app(state.clone()).oneshot(req).await.expect("oneshot");
     assert_eq!(resp.status(), StatusCode::NO_CONTENT);
