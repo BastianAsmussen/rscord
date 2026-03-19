@@ -25,8 +25,8 @@ pub fn routes() -> Router<AppState> {
 /// Add a push token.
 #[utoipa::path(
     post,
-    path = "/api/push-token",
-    request_body = NewPushToken,
+    path = "/api/push-token/{token}",
+    params(("token" = String, Path, description = "The push token to be added")),
     responses(
         (status = 204, description = "push token uploaded successfully",),
         (status = 409, description = "duplicate Token",),
