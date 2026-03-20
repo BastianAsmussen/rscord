@@ -661,6 +661,88 @@ async fn non_member_cannot_send_guild_message() {
     assert_eq!(resp.status(), StatusCode::FORBIDDEN);
 }
 
+/// A user whose `displayed_users` row is missing (simulating a pre-migration
+/// account) should still be able to send messages — the endpoint backfills
+/// the row on the fly.
+#[tokio::test]
+async fn send_message_backfills_missing_displayed_user() {
+    let pool = test_pool("msg_backfill").await;
+
+    // Create a user WITHOUT a displayed_users row to simulate a pre-migration
+    // account. We insert directly into the users table only.
+    let conn = pool.get().await.expect("conn");
+    let new_user = NewUser {
+        email: "backfill@test.com".to_owned(),
+        handle: "backfiller".to_owned(),
+        opaque_record: vec![0u8; 192],
+    };
+    let user: User = conn
+        .interact(move |conn| {
+            diesel::insert_into(users_schema::dsl::users::table())
+                .values(new_user)
+                .returning(User::as_returning())
+                .get_result(conn)
+                .expect("insert user")
+        })
+        .await
+        .expect("interact failed");
+    let token = seed_session(&pool, user.id).await;
+
+    // Verify no displayed_users row exists for this user.
+    let uid = user.id;
+    let has_display_row: bool = conn
+        .interact(move |conn| {
+            use diesel::prelude::*;
+            displayed_users_schema::table
+                .filter(displayed_users_schema::user_id.eq(uid))
+                .count()
+                .get_result::<i64>(conn)
+                .expect("count")
+                > 0
+        })
+        .await
+        .expect("interact");
+    assert!(!has_display_row, "displayed_users row should NOT exist yet");
+
+    let state = test_state(pool);
+
+    // Create a guild (this requires the displayed_users row to not be needed).
+    let req = post_json("/api/guilds", &token, &json!({ "name": "BackfillGuild" }));
+    let resp = app(state.clone()).oneshot(req).await.expect("oneshot");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let guild = body_json(resp.into_body()).await;
+    let guild_id = guild["id"].as_i64().expect("guild id");
+
+    // Get the default channel.
+    let req = get_req(&format!("/api/guilds/{guild_id}/channels"), &token);
+    let resp = app(state.clone()).oneshot(req).await.expect("oneshot");
+    let chans = body_json(resp.into_body()).await;
+    let channel_id = chans.as_array().expect("array")[0]["id"]
+        .as_i64()
+        .expect("channel id");
+
+    // Send a message — this should succeed despite the missing displayed_users row.
+    let req = post_json(
+        &format!("/api/channels/{channel_id}/messages"),
+        &token,
+        &json!({ "contents": "I have no display profile yet!" }),
+    );
+    let resp = app(state.clone()).oneshot(req).await.expect("oneshot");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+
+    let msg = body_json(resp.into_body()).await;
+    assert_eq!(msg["contents"], "I have no display profile yet!");
+
+    // Sending a second message should also work (row already backfilled).
+    let req = post_json(
+        &format!("/api/channels/{channel_id}/messages"),
+        &token,
+        &json!({ "contents": "Second message" }),
+    );
+    let resp = app(state).oneshot(req).await.expect("oneshot");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+}
+
 // Roles.
 
 #[tokio::test]
