@@ -178,7 +178,8 @@ export default function GuildPage() {
         channelId: cid,
         content: text,
       });
-      setMessages((prev) => [...prev, msg]);
+
+      setMessages((prev) => [msg, ...prev]);
     } catch (e) {
       console.error("Send failed:", e);
     }
