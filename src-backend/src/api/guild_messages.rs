@@ -234,7 +234,9 @@ pub async fn get_guild_messages(
         .map_err(|e| match e {
             MessageError::InvalidSession => ApiError::Unauthorized("Invalid session".into()),
             MessageError::ChannelNotFound => ApiError::NotFound("Channel not found".into()),
-            MessageError::NotAMember => ApiError::Forbidden("Not a member of this guild".into()),
+            MessageError::NotAMember => {
+                ApiError::Forbidden("Not a member of this guild".into())
+            }
             MessageError::Database(e) => ApiError::Internal(e.to_string()),
         })?;
 
