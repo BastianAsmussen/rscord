@@ -1,5 +1,6 @@
 pub mod api;
 
+use reqwest::ClientBuilder;
 use tauri::Manager;
 
 use crate::api::{
@@ -40,7 +41,10 @@ pub fn run() {
         .plugin(tauri_plugin_websocket::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .manage(AppClientState {
-            client: reqwest::Client::new(),
+            client: ClientBuilder::new()
+                .danger_accept_invalid_certs(true)
+                .build()
+                .expect("Failed to build HTTP client!"),
             token: String::new().into(),
             ws_task: Mutex::new(None),
         })
