@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 pub struct GuildMessage {
     pub id: i64,
     pub author_id: i64,
+    pub author_name: String,
     pub reply_to_id: Option<i64>,
     pub channel_id: i64,
     pub contents: Option<String>,

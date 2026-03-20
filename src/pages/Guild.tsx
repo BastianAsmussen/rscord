@@ -22,6 +22,7 @@ type Member = { user_id: number; user_handle: string; roles: Role[] };
 type GuildMessage = {
   id: number;
   author_id: number;
+  author_name: string;
   reply_to_id: number | null;
   channel_id: number;
   contents: string | null;
