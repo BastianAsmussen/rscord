@@ -1,5 +1,6 @@
 import {createEffect, createMemo, createSignal, onCleanup, onMount} from "solid-js";
 import {invoke} from "@tauri-apps/api/core";
+import {useNavigate} from "@solidjs/router";
 
 import GuildSidebar from "../components/guild/GuildSidebar";
 import ChannelSidebar from "../components/guild/ChannelSidebar";
@@ -23,6 +24,7 @@ type GuildMessage = {
 };
 
 export default function GuildPage() {
+    const navigate = useNavigate();
     let ws: WebSocket | null = null;
     const [guilds, setGuilds] = createSignal<Guild[]>([]);
     const [channels, setChannels] = createSignal<Channel[]>([]);
@@ -36,51 +38,52 @@ export default function GuildPage() {
     const [showMembers, setShowMembers] = createSignal(false);
 
     onMount(async () => {
-        const sessionRaw = localStorage.getItem("session");
-
-        if (sessionRaw) {
-            await invoke("set_token", { tokenJson: sessionRaw });
-        } else {
-            console.error("No session found in localStorage");
+        // Check that a valid (non-expired) session still exists in localStorage
+        // so we redirect to sign-in before attempting any API calls.
+        const raw = localStorage.getItem("session");
+        if (!raw) {
+            navigate("/signin");
             return;
         }
+        let session: { token: string; expires: string } | null = null;
+        try {
+            session = JSON.parse(raw);
+        } catch {
+            localStorage.removeItem("session");
+            navigate("/signin");
+            return;
+        }
+        if (!session?.token || new Date(session.expires) <= new Date()) {
+            localStorage.removeItem("session");
+            navigate("/signin");
+            return;
+        }
+        // The token is persisted on the Rust side (via tauri-plugin-store) and
+        // restored automatically at startup — no set_token call needed here.
 
-        await invoke("init_websocket");
+        try {
+            await invoke("init_websocket");
+        } catch (e) {
+            console.error("Failed to init WebSocket:", e);
+        }
 
-        const unlisten = await listen<string>("new-message", (event) => {
-            try {
-                const newMessage: GuildMessage = JSON.parse(event.payload);
-                if (newMessage.channel_id === activeChannel()) {
-                    setMessages((prev) => [...prev, newMessage]);
-                }
-            } catch (e) {
-                console.error("Failed to parse incoming message:", e);
+        const unlisten = await listen<GuildMessage>("guild-message", (event) => {
+            const newMessage = event.payload;
+            if (newMessage.channel_id === activeChannel()) {
+                setMessages((prev) => [...prev, newMessage]);
             }
         });
 
-        await refreshGuilds()
         onCleanup(() => unlisten());
-    });
 
-    const refreshGuilds = async () => {
         try {
             const data: Guild[] = await invoke("list_my_guilds");
             setGuilds(data);
+            if (data.length > 0) setActiveGuild(data[0].id);
         } catch (e) {
-            console.error("Failed to refresh guilds:", e);
+            console.error("Failed to load guilds:", e);
         }
-    };
-
-    const refreshChannels = async () => {
-        const gid = activeGuild();
-        if (!gid) return;
-        try {
-            const newChannels = await invoke<Channel[]>("get_guild_channels", { id: gid });
-            setChannels(newChannels);
-        } catch (e) {
-            console.error("Refresh channels failed:", e);
-        }
-    };
+    });
 
     const memberDisplayList = createMemo(() =>
         members().map(m => ({
@@ -145,9 +148,9 @@ export default function GuildPage() {
         const cid = activeChannel();
         if (!cid) return;
         try {
-            const msg = await invoke<GuildMessage>("send_message", { channelId: cid, content: text });
-
-            setMessages((prev) => [...prev, msg]);
+            await invoke("send_message", { channelId: cid, content: text });
+            // The sent message is delivered back via the WebSocket connection,
+            // so we do not add it to state here to avoid duplicates.
         } catch (e) {
             console.error("Send failed:", e);
         }
@@ -158,16 +161,13 @@ export default function GuildPage() {
             guilds={guilds()}
             activeGuild={activeGuild() ?? 0}
             onSelect={selectGuild}
-            onGuildCreated={refreshGuilds}
         />
 
         <div class="hidden md:block shrink-0">
             <ChannelSidebar
                 channels={channels()}
                 activeChannel={activeChannel() ?? 0}
-                activeGuild={activeGuild()}
                 onSelect={selectChannel}
-                onChannelCreated={refreshChannels}
                 title={activeGuildName()}
             />
         </div>
@@ -228,10 +228,7 @@ export default function GuildPage() {
                 <ChannelSidebar
                     channels={channels()}
                     activeChannel={activeChannel() ?? 0}
-                    activeGuild={activeGuild()}
                     onSelect={selectChannel}
-                    onChannelCreated={refreshChannels}
-                    title={activeGuildName()}
                 />
             </div>
         </div>)}

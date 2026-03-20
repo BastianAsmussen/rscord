@@ -2,7 +2,7 @@ use crate::api::auth_extractor::AuthUser;
 use crate::api::errors::ApiError;
 use crate::api::opaque::AppState;
 use crate::db::models::guild_messages::{GuildMessage, NewGuildMessage};
-use crate::db::schema::{channels, guild_members, guild_messages, sessions};
+use crate::db::schema::{channels, displayed_users, guild_members, guild_messages, sessions};
 use ApiError::Forbidden;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
@@ -36,7 +36,8 @@ pub fn routes() -> Router<AppState> {
         (status = 201, description = "Message sent", body = GuildMessage),
         (status = 403, description = "Forbidden")
     ),
-    params(("channel_id" = i64, Path, description = "Channel ID"))
+    params(("channel_id" = i64, Path, description = "Channel ID")),
+    security(("session_token" = [])),
 )]
 pub async fn send_guild_message(
     auth: AuthUser,
@@ -76,9 +77,16 @@ pub async fn send_guild_message(
                 return Err(diesel::result::Error::RollbackTransaction);
             }
 
+            // Resolve the displayed_users.id for this user (the FK target for
+            // guild_messages.author_id). Created atomically at registration.
+            let displayed_user_id: i64 = displayed_users::table
+                .filter(displayed_users::user_id.eq(user_id))
+                .select(displayed_users::id)
+                .first::<i64>(conn)?;
+
             diesel::insert_into(guild_messages::table)
                 .values((
-                    guild_messages::author_id.eq(user_id),
+                    guild_messages::author_id.eq(displayed_user_id),
                     guild_messages::channel_id.eq(channel_id),
                     guild_messages::reply_to_id.eq(payload.reply_to_id),
                     guild_messages::contents.eq(payload.contents),

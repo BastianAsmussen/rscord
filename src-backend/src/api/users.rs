@@ -11,7 +11,7 @@ use crate::{
     api::{errors::ErrorBody, opaque::AppState},
     db::{
         models::users::{NewUser, UpdateUser, User},
-        schema::users as users_schema,
+        schema::{displayed_users, users as users_schema},
     },
 };
 
@@ -216,6 +216,15 @@ pub async fn delete_user(
 
     let rows_deleted: usize = conn
         .interact(move |conn| {
+            // Anonymize the display profile before deleting the user. The FK
+            // on displayed_users.user_id is ON DELETE SET NULL, so user_id is
+            // nulled automatically by the database when the users row is
+            // removed. Updating display_name here makes message history
+            // shows "Deleted User <id>" rather than the real handle.
+            diesel::update(displayed_users::table.filter(displayed_users::user_id.eq(user_id)))
+                .set(displayed_users::display_name.eq(format!("Deleted User {user_id}")))
+                .execute(conn)?;
+
             diesel::delete(users_schema::dsl::users.filter(users_schema::dsl::id.eq(user_id)))
                 .execute(conn)
         })
