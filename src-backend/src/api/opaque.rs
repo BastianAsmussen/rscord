@@ -1,5 +1,5 @@
 use crate::db::models::direct_messages::DirectMessage;
-use crate::db::models::guild_messages::GuildMessage;
+use crate::db::models::guild_messages::GuildMessageResponse;
 use argon2::{Argon2, password_hash::rand_core::OsRng};
 use axum::extract::FromRef;
 use chrono::{Duration, NaiveDateTime, Utc};
@@ -46,7 +46,7 @@ pub struct AppState {
     /// In-flight login handshakes (TTL: 2 min).
     pub pending_logins: Arc<Mutex<HashMap<String, PendingLogin>>>,
     /// The global message bus for real time guild events
-    pub tx: broadcast::Sender<GuildMessage>,
+    pub tx: broadcast::Sender<GuildMessageResponse>,
     /// The global message bus for real time encrypted DM events
     pub dm_tx: broadcast::Sender<DirectMessage>,
 }

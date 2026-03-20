@@ -1,7 +1,7 @@
 use crate::api::auth_extractor::AuthUser;
 use crate::api::errors::ApiError;
 use crate::api::opaque::AppState;
-use crate::db::models::guild_messages::{GuildMessage, NewGuildMessage};
+use crate::db::models::guild_messages::{GuildMessage, GuildMessageResponse, NewGuildMessage};
 use crate::db::schema::{
     channels, displayed_users, guild_members, guild_messages, sessions, users,
 };
@@ -45,7 +45,7 @@ enum MessageError {
     post,
     path = "/api/channels/{channel_id}/messages",
     responses(
-        (status = 201, description = "Message sent", body = GuildMessage),
+        (status = 201, description = "Message sent", body = GuildMessageResponse),
         (status = 403, description = "Forbidden"),
         (status = 404, description = "Channel not found")
     ),
@@ -57,7 +57,7 @@ pub async fn send_guild_message(
     State(state): State<AppState>,
     Path(channel_id): Path<i64>,
     Json(payload): Json<NewGuildMessage>,
-) -> Result<(StatusCode, Json<GuildMessage>), ApiError> {
+) -> Result<(StatusCode, Json<GuildMessageResponse>), ApiError> {
     let conn = state.pool.get().await?;
     let user_id = auth.session.user_id;
     let session_id = auth.session.id;
@@ -96,47 +96,46 @@ pub async fn send_guild_message(
                 return Err(MessageError::NotAMember);
             }
 
-            // Resolve the displayed_users.id for this user (the FK target for
+            // Resolve the displayed_users row for this user (the FK target for
             // guild_messages.author_id). Created atomically at registration,
             // but may be missing for users who registered before this was added.
-            let displayed_user_id: i64 = match displayed_users::table
+            let (displayed_user_id, author_name) = if let Some(row) = displayed_users::table
                 .filter(displayed_users::user_id.eq(user_id))
-                .select(displayed_users::id)
-                .first::<i64>(conn)
+                .select((displayed_users::id, displayed_users::display_name))
+                .first::<(i64, String)>(conn)
                 .optional()
                 .map_err(MessageError::Database)?
             {
-                Some(id) => id,
-                None => {
-                    // Backfill: create the missing displayed_users row using
-                    // the user's handle from the users table.
-                    let handle: String = users::table
-                        .find(user_id)
-                        .select(users::user_handle)
-                        .first::<String>(conn)
-                        .map_err(MessageError::Database)?;
+                row
+            } else {
+                // Backfill: create the missing displayed_users row using
+                // the user's handle from the users table.
+                let handle: String = users::table
+                    .find(user_id)
+                    .select(users::user_handle)
+                    .first::<String>(conn)
+                    .map_err(MessageError::Database)?;
 
-                    diesel::insert_into(displayed_users::table)
-                        .values((
-                            displayed_users::user_id.eq(Some(user_id)),
-                            displayed_users::display_name.eq(&handle),
-                        ))
-                        .on_conflict(displayed_users::user_id)
-                        .do_nothing()
-                        .execute(conn)
-                        .map_err(MessageError::Database)?;
+                diesel::insert_into(displayed_users::table)
+                    .values((
+                        displayed_users::user_id.eq(Some(user_id)),
+                        displayed_users::display_name.eq(&handle),
+                    ))
+                    .on_conflict(displayed_users::user_id)
+                    .do_nothing()
+                    .execute(conn)
+                    .map_err(MessageError::Database)?;
 
-                    // Re-fetch the id (handles the race where another request
-                    // inserted concurrently via ON CONFLICT DO NOTHING).
-                    displayed_users::table
-                        .filter(displayed_users::user_id.eq(user_id))
-                        .select(displayed_users::id)
-                        .first::<i64>(conn)
-                        .map_err(MessageError::Database)?
-                }
+                // Re-fetch (handles the race where another request
+                // inserted concurrently via ON CONFLICT DO NOTHING).
+                displayed_users::table
+                    .filter(displayed_users::user_id.eq(user_id))
+                    .select((displayed_users::id, displayed_users::display_name))
+                    .first::<(i64, String)>(conn)
+                    .map_err(MessageError::Database)?
             };
 
-            diesel::insert_into(guild_messages::table)
+            let msg = diesel::insert_into(guild_messages::table)
                 .values((
                     guild_messages::author_id.eq(displayed_user_id),
                     guild_messages::channel_id.eq(channel_id),
@@ -145,7 +144,9 @@ pub async fn send_guild_message(
                 ))
                 .returning(GuildMessage::as_returning())
                 .get_result::<GuildMessage>(conn)
-                .map_err(MessageError::Database)
+                .map_err(MessageError::Database)?;
+
+            Ok(GuildMessageResponse::new(msg, author_name))
         })
         .await
         .map_err(|e| ApiError::Internal(e.to_string()))?
@@ -172,7 +173,7 @@ pub async fn send_guild_message(
     get,
     path = "/api/channels/{channel_id}/messages",
     responses(
-        (status = 200, description = "Message history", body = Vec<GuildMessage>),
+        (status = 200, description = "Message history", body = Vec<GuildMessageResponse>),
         (status = 403, description = "Forbidden"),
         (status = 404, description = "Channel not found")
     ),
@@ -182,7 +183,7 @@ pub async fn get_guild_messages(
     auth: AuthUser,
     State(state): State<AppState>,
     Path(channel_id): Path<i64>,
-) -> Result<Json<Vec<GuildMessage>>, ApiError> {
+) -> Result<Json<Vec<GuildMessageResponse>>, ApiError> {
     let conn = state.pool.get().await?;
     let user_id = auth.session.user_id;
     let session_id = auth.session.id;
@@ -221,22 +222,28 @@ pub async fn get_guild_messages(
                 return Err(MessageError::NotAMember);
             }
 
-            guild_messages::table
+            let rows: Vec<(GuildMessage, String)> = guild_messages::table
+                .inner_join(
+                    displayed_users::table.on(displayed_users::id.eq(guild_messages::author_id)),
+                )
                 .filter(guild_messages::channel_id.eq(channel_id))
                 .order(guild_messages::created_at.desc())
                 .limit(50)
-                .select(GuildMessage::as_select())
-                .load::<GuildMessage>(conn)
-                .map_err(MessageError::Database)
+                .select((GuildMessage::as_select(), displayed_users::display_name))
+                .load::<(GuildMessage, String)>(conn)
+                .map_err(MessageError::Database)?;
+
+            Ok(rows
+                .into_iter()
+                .map(|(msg, name)| GuildMessageResponse::new(msg, name))
+                .collect())
         })
         .await
         .map_err(|e| ApiError::Internal(e.to_string()))?
         .map_err(|e| match e {
             MessageError::InvalidSession => ApiError::Unauthorized("Invalid session".into()),
             MessageError::ChannelNotFound => ApiError::NotFound("Channel not found".into()),
-            MessageError::NotAMember => {
-                ApiError::Forbidden("Not a member of this guild".into())
-            }
+            MessageError::NotAMember => ApiError::Forbidden("Not a member of this guild".into()),
             MessageError::Database(e) => ApiError::Internal(e.to_string()),
         })?;
 

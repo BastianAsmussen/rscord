@@ -34,7 +34,7 @@ pub async fn ws_handler(
 enum WsEvent {
     /// A plaintext guild message.
     #[serde(rename = "guild_message")]
-    GuildMessage(crate::db::models::guild_messages::GuildMessage),
+    GuildMessage(crate::db::models::guild_messages::GuildMessageResponse),
     /// An encrypted direct message (ciphertext + nonce + ratchet key id).
     #[serde(rename = "direct_message")]
     DirectMessage(crate::db::models::direct_messages::DirectMessage),

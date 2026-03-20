@@ -613,6 +613,7 @@ async fn send_and_get_guild_messages() {
 
     let msg = body_json(resp.into_body()).await;
     assert_eq!(msg["contents"], "Hello, guild!");
+    assert_eq!(msg["author_name"], "messenger");
 
     // Retrieve messages.
     let req = get_req(&format!("/api/channels/{channel_id}/messages"), &token);
@@ -623,6 +624,7 @@ async fn send_and_get_guild_messages() {
     let msgs = msgs.as_array().expect("array");
     assert_eq!(msgs.len(), 1);
     assert_eq!(msgs[0]["contents"], "Hello, guild!");
+    assert_eq!(msgs[0]["author_name"], "messenger");
 }
 
 #[tokio::test]
@@ -732,6 +734,7 @@ async fn send_message_backfills_missing_displayed_user() {
 
     let msg = body_json(resp.into_body()).await;
     assert_eq!(msg["contents"], "I have no display profile yet!");
+    assert_eq!(msg["author_name"], "backfiller");
 
     // Sending a second message should also work (row already backfilled).
     let req = post_json(
