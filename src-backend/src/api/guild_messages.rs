@@ -2,7 +2,9 @@ use crate::api::auth_extractor::AuthUser;
 use crate::api::errors::ApiError;
 use crate::api::opaque::AppState;
 use crate::db::models::guild_messages::{GuildMessage, NewGuildMessage};
-use crate::db::schema::{channels, displayed_users, guild_members, guild_messages, sessions};
+use crate::db::schema::{
+    channels, displayed_users, guild_members, guild_messages, sessions, users,
+};
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::routing::{get, post};
@@ -95,12 +97,44 @@ pub async fn send_guild_message(
             }
 
             // Resolve the displayed_users.id for this user (the FK target for
-            // guild_messages.author_id). Created atomically at registration.
-            let displayed_user_id: i64 = displayed_users::table
+            // guild_messages.author_id). Created atomically at registration,
+            // but may be missing for users who registered before this was added.
+            let displayed_user_id: i64 = match displayed_users::table
                 .filter(displayed_users::user_id.eq(user_id))
                 .select(displayed_users::id)
                 .first::<i64>(conn)
-                .map_err(MessageError::Database)?;
+                .optional()
+                .map_err(MessageError::Database)?
+            {
+                Some(id) => id,
+                None => {
+                    // Backfill: create the missing displayed_users row using
+                    // the user's handle from the users table.
+                    let handle: String = users::table
+                        .find(user_id)
+                        .select(users::user_handle)
+                        .first::<String>(conn)
+                        .map_err(MessageError::Database)?;
+
+                    diesel::insert_into(displayed_users::table)
+                        .values((
+                            displayed_users::user_id.eq(Some(user_id)),
+                            displayed_users::display_name.eq(&handle),
+                        ))
+                        .on_conflict(displayed_users::user_id)
+                        .do_nothing()
+                        .execute(conn)
+                        .map_err(MessageError::Database)?;
+
+                    // Re-fetch the id (handles the race where another request
+                    // inserted concurrently via ON CONFLICT DO NOTHING).
+                    displayed_users::table
+                        .filter(displayed_users::user_id.eq(user_id))
+                        .select(displayed_users::id)
+                        .first::<i64>(conn)
+                        .map_err(MessageError::Database)?
+                }
+            };
 
             diesel::insert_into(guild_messages::table)
                 .values((

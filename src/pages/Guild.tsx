@@ -160,7 +160,7 @@ export default function GuildPage() {
         try {
             const data: Guild[] = await invoke("list_my_guilds");
             setGuilds(data);
-            if (data.length > 0 && !data.find(g => g.id === activeGuild())) {
+            if (data.length > 0 && !data.some(g => g.id === activeGuild())) {
                 setActiveGuild(data[0].id);
             }
         } catch (e) {
