@@ -7,7 +7,7 @@ use opaque_ke::{
 };
 
 use reqwest::{
-    ClientBuilder, Url,
+    Client, ClientBuilder, Url,
     cookie::{CookieStore, Jar},
 };
 
@@ -38,7 +38,10 @@ struct AuthResponse {
     user_id: i64,
 
     token: String,
-    expires_at: NaiveDateTime,
+    // Deserialize the field named "expires_at" from the backend server,
+    // but serialize it as "expires" to the frontend.
+    #[serde(rename(deserialize = "expires_at", serialize = "expires"))]
+    expires: NaiveDateTime,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -101,10 +104,7 @@ struct LoginFinishReq<'a> {
 #[tauri::command(async)]
 pub async fn sign_up(email: &str, handle: &str, password: &str) -> Result<RegisteredUser, String> {
     let password = password.as_bytes();
-    let client = ClientBuilder::new()
-        .danger_accept_invalid_certs(true)
-        .build()
-        .map_err(|e| e.to_string())?;
+    let client = Client::new();
 
     let mut client_rng = OsRng;
     let client_registration_start =
@@ -179,7 +179,6 @@ pub async fn log_in(
     let password = password.as_bytes();
     let cookie_jar = Arc::new(Jar::default());
     let client = ClientBuilder::new()
-        .danger_accept_invalid_certs(true)
         .cookie_provider(cookie_jar.clone())
         .build()
         .map_err(|e| e.to_string())?;

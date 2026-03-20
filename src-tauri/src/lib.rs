@@ -50,6 +50,7 @@ pub fn run() {
             // the frontend to round-trip the token back via set_token.
             let state = app.state::<AppClientState>();
             restore_token(app.handle(), &state);
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

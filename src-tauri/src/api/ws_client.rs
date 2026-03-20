@@ -1,6 +1,5 @@
 use crate::AppClientState;
 use crate::api::WS_URL;
-use crate::api::token::get_token;
 use futures_util::StreamExt;
 use serde::Deserialize;
 use tauri::http::Request;
@@ -30,6 +29,9 @@ async fn run_ws_connection(app: AppHandle, token: String) {
         .header("Upgrade", "websocket")
         .header("Sec-WebSocket-Version", "13")
         .header("Sec-WebSocket-Key", generate_key())
+        // The Host header is intentionally omitted here; tokio-tungstenite
+        // derives it from the request URI, which is correct for both dev
+        // (localhost:8080) and production (rscord.asmussen.tech).
         .body(())
     {
         Ok(r) => r,
@@ -70,23 +72,31 @@ async fn run_ws_connection(app: AppHandle, token: String) {
 
 /// Initializes the WebSocket connection, cancelling any previously active one.
 ///
+/// `token` is the session token supplied by the frontend (read from its
+/// persistent storage). It is saved into the shared [`AppClientState`] and the
+/// on-disk store so that all subsequent Tauri commands have it available
+/// without requiring a separate `set_token` round-trip.
+///
 /// This ensures at most one live connection exists at any time, preventing
 /// duplicate message delivery when the command is invoked multiple times
 /// (e.g., on component remount).
 ///
 /// # Errors
 ///
-/// Returns an error string if no authentication token is available.
+/// Returns an error string if the supplied token is empty.
 #[tauri::command]
 pub async fn init_websocket(
+    token: String,
     app: AppHandle,
     state: tauri::State<'_, AppClientState>,
 ) -> Result<(), String> {
-    let token = get_token(&state);
-
     if token.is_empty() {
         return Err("No token found".into());
     }
+
+    // Persist the token so every subsequent command can read it from state,
+    // and so app restarts can restore it from the on-disk store.
+    crate::api::token::save_token(&app, &state, &token);
 
     let task = tauri::async_runtime::spawn(async move {
         run_ws_connection(app, token).await;
