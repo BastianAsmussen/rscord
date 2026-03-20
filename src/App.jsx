@@ -8,7 +8,14 @@ export default function App() {
     return (
         <>
             <Route path="/signin" component={SignIn} />
-            <Route path="/guild" component={GuildPage} />
+            <Route
+                path="/guild"
+                component={() => (
+                    <AuthGuard>
+                        <GuildPage />
+                    </AuthGuard>
+                )}
+            />
             <Route
                 path="/"
                 component={() => (
