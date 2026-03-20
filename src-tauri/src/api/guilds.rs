@@ -166,12 +166,8 @@ pub async fn create_guild(
 /// Returns an error string if:
 /// * The network request fails (e.g., timeout or connection issues).
 /// * The API returns a non-success status code (e.g., 404 Not Found, 422 Already a Member).
-/// * The response body fails to deserialize into a `GuildSummary`.
 #[tauri::command(async)]
-pub async fn join_guild(
-    id: i64,
-    state: tauri::State<'_, AppClientState>,
-) -> Result<GuildSummary, String> {
+pub async fn join_guild(id: i64, state: tauri::State<'_, AppClientState>) -> Result<(), String> {
     let url = format!("{BASE_URL}/api/guilds/{id}/join");
     let token = get_token(&state);
 
@@ -184,10 +180,8 @@ pub async fn join_guild(
         .await
         .map_err(|e| format!("Request failed: {e}"))?
         .error_for_status()
-        .map_err(|e| format!("API error: {e}"))?
-        .json::<GuildSummary>()
-        .await
-        .map_err(|e| format!("Deserialization failed: {e}"))
+        .map_err(|e| format!("API error: {e}"))?;
+    Ok(())
 }
 
 /// Creates a new channel within a guild.

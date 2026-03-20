@@ -156,11 +156,24 @@ export default function GuildPage() {
         }
     };
 
+    const refreshGuilds = async () => {
+        try {
+            const data: Guild[] = await invoke("list_my_guilds");
+            setGuilds(data);
+            if (data.length > 0 && !data.find(g => g.id === activeGuild())) {
+                setActiveGuild(data[0].id);
+            }
+        } catch (e) {
+            console.error("Failed to refresh guilds:", e);
+        }
+    };
+
     return (<div class="flex h-screen bg-base text-text overflow-hidden">
         <GuildSidebar
             guilds={guilds()}
             activeGuild={activeGuild() ?? 0}
             onSelect={selectGuild}
+            onGuildCreated={refreshGuilds}
         />
 
         <div class="hidden md:block shrink-0">

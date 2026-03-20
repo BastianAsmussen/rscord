@@ -3,7 +3,6 @@ use crate::api::errors::ApiError;
 use crate::api::opaque::AppState;
 use crate::db::models::guild_messages::{GuildMessage, NewGuildMessage};
 use crate::db::schema::{channels, displayed_users, guild_members, guild_messages, sessions};
-use ApiError::Forbidden;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::routing::{get, post};
@@ -22,11 +21,22 @@ pub fn routes() -> Router<AppState> {
         )
 }
 
-/// Send a Direct Message
+/// Distinguishes the reasons a guild-message operation can fail inside the
+/// database closure so the outer code can map each to the correct HTTP status.
+#[derive(Debug)]
+enum MessageError {
+    InvalidSession,
+    ChannelNotFound,
+    NotAMember,
+    Database(diesel::result::Error),
+}
+
+/// Send a Guild Message
 ///
 /// # Errors
 ///
 /// - `ApiError::Unauthorized`: If the user session is missing or invalid.
+/// - `ApiError::NotFound`: If the channel does not exist.
 /// - `ApiError::Forbidden`: If the user is not a member of the guild.
 /// - `ApiError::Internal`: If the database operation fails.
 #[utoipa::path(
@@ -34,7 +44,8 @@ pub fn routes() -> Router<AppState> {
     path = "/api/channels/{channel_id}/messages",
     responses(
         (status = 201, description = "Message sent", body = GuildMessage),
-        (status = 403, description = "Forbidden")
+        (status = 403, description = "Forbidden"),
+        (status = 404, description = "Channel not found")
     ),
     params(("channel_id" = i64, Path, description = "Channel ID")),
     security(("session_token" = [])),
@@ -54,27 +65,33 @@ pub async fn send_guild_message(
             let session_exists = sessions::table
                 .find(session_id)
                 .first::<crate::db::models::sessions::Session>(conn)
-                .optional()?
+                .optional()
+                .map_err(MessageError::Database)?
                 .is_some();
 
             if !session_exists {
-                return Err(diesel::result::Error::NotFound);
+                return Err(MessageError::InvalidSession);
             }
 
             let guild_id = channels::table
                 .find(channel_id)
                 .select(channels::guild_id.assume_not_null())
-                .first::<i64>(conn)?;
+                .first::<i64>(conn)
+                .map_err(|e| match e {
+                    diesel::result::Error::NotFound => MessageError::ChannelNotFound,
+                    other => MessageError::Database(other),
+                })?;
 
             let is_member = guild_members::table
                 .filter(guild_members::guild_id.eq(guild_id))
                 .filter(guild_members::user_id.eq(user_id))
                 .count()
-                .get_result::<i64>(conn)?
+                .get_result::<i64>(conn)
+                .map_err(MessageError::Database)?
                 > 0;
 
             if !is_member {
-                return Err(diesel::result::Error::RollbackTransaction);
+                return Err(MessageError::NotAMember);
             }
 
             // Resolve the displayed_users.id for this user (the FK target for
@@ -82,7 +99,8 @@ pub async fn send_guild_message(
             let displayed_user_id: i64 = displayed_users::table
                 .filter(displayed_users::user_id.eq(user_id))
                 .select(displayed_users::id)
-                .first::<i64>(conn)?;
+                .first::<i64>(conn)
+                .map_err(MessageError::Database)?;
 
             diesel::insert_into(guild_messages::table)
                 .values((
@@ -93,15 +111,15 @@ pub async fn send_guild_message(
                 ))
                 .returning(GuildMessage::as_returning())
                 .get_result::<GuildMessage>(conn)
+                .map_err(MessageError::Database)
         })
         .await
         .map_err(|e| ApiError::Internal(e.to_string()))?
         .map_err(|e| match e {
-            diesel::result::Error::NotFound => ApiError::Unauthorized("Invalid session".into()),
-            diesel::result::Error::RollbackTransaction => {
-                ApiError::Forbidden("Not a member".into())
-            }
-            _ => ApiError::Internal(e.to_string()),
+            MessageError::InvalidSession => ApiError::Unauthorized("Invalid session".into()),
+            MessageError::ChannelNotFound => ApiError::NotFound("Channel not found".into()),
+            MessageError::NotAMember => ApiError::Forbidden("Not a member".into()),
+            MessageError::Database(e) => ApiError::Internal(e.to_string()),
         })?;
 
     drop(state.tx.send(message.clone()));
@@ -113,6 +131,7 @@ pub async fn send_guild_message(
 /// # Errors
 ///
 /// - `ApiError::Unauthorized`: If the user session is missing or invalid.
+/// - `ApiError::NotFound`: If the channel does not exist.
 /// - `ApiError::Forbidden`: If the user is not a member of the guild.
 /// - `ApiError::Internal`: If the database operation fails.
 #[utoipa::path(
@@ -120,7 +139,8 @@ pub async fn send_guild_message(
     path = "/api/channels/{channel_id}/messages",
     responses(
         (status = 200, description = "Message history", body = Vec<GuildMessage>),
-        (status = 403, description = "Forbidden")
+        (status = 403, description = "Forbidden"),
+        (status = 404, description = "Channel not found")
     ),
     params(("channel_id" = i64, Path, description = "Channel ID"))
 )]
@@ -138,27 +158,33 @@ pub async fn get_guild_messages(
             let session_exists = sessions::table
                 .find(session_id)
                 .first::<crate::db::models::sessions::Session>(conn)
-                .optional()?
+                .optional()
+                .map_err(MessageError::Database)?
                 .is_some();
 
             if !session_exists {
-                return Err(diesel::result::Error::NotFound);
+                return Err(MessageError::InvalidSession);
             }
 
             let guild_id = channels::table
                 .find(channel_id)
                 .select(channels::guild_id.assume_not_null())
-                .first::<i64>(conn)?;
+                .first::<i64>(conn)
+                .map_err(|e| match e {
+                    diesel::result::Error::NotFound => MessageError::ChannelNotFound,
+                    other => MessageError::Database(other),
+                })?;
 
             let is_member = guild_members::table
                 .filter(guild_members::guild_id.eq(guild_id))
                 .filter(guild_members::user_id.eq(user_id))
                 .count()
-                .get_result::<i64>(conn)?
+                .get_result::<i64>(conn)
+                .map_err(MessageError::Database)?
                 > 0;
 
             if !is_member {
-                return Err(diesel::result::Error::RollbackTransaction);
+                return Err(MessageError::NotAMember);
             }
 
             guild_messages::table
@@ -167,15 +193,15 @@ pub async fn get_guild_messages(
                 .limit(50)
                 .select(GuildMessage::as_select())
                 .load::<GuildMessage>(conn)
+                .map_err(MessageError::Database)
         })
         .await
         .map_err(|e| ApiError::Internal(e.to_string()))?
         .map_err(|e| match e {
-            diesel::result::Error::NotFound => ApiError::Unauthorized("Invalid session".into()),
-            diesel::result::Error::RollbackTransaction => {
-                Forbidden("Not a member of this guild".into())
-            }
-            _ => ApiError::Internal(e.to_string()),
+            MessageError::InvalidSession => ApiError::Unauthorized("Invalid session".into()),
+            MessageError::ChannelNotFound => ApiError::NotFound("Channel not found".into()),
+            MessageError::NotAMember => ApiError::Forbidden("Not a member of this guild".into()),
+            MessageError::Database(e) => ApiError::Internal(e.to_string()),
         })?;
 
     Ok(Json(messages))
