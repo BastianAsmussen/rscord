@@ -7,7 +7,7 @@ use opaque_ke::{
 };
 
 use reqwest::{
-    ClientBuilder, Url,
+    Client, ClientBuilder, Url,
     cookie::{CookieStore, Jar},
 };
 
@@ -38,7 +38,10 @@ struct AuthResponse {
     user_id: i64,
 
     token: String,
-    expires_at: NaiveDateTime,
+    // Deserialize the field named "expires_at" from the backend server,
+    // but serialize it as "expires" to the frontend.
+    #[serde(rename(deserialize = "expires_at", serialize = "expires"))]
+    expires: NaiveDateTime,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

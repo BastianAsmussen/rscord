@@ -1,7 +1,6 @@
 use crate::AppClientState;
 use crate::api::BASE_URL;
 use crate::api::token::get_token;
-use serde_json::json;
 
 #[tauri::command]
 pub async fn add_push_token(

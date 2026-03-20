@@ -25,7 +25,6 @@ type GuildMessage = {
 
 export default function GuildPage() {
     const navigate = useNavigate();
-    let ws: WebSocket | null = null;
     const [guilds, setGuilds] = createSignal<Guild[]>([]);
     const [channels, setChannels] = createSignal<Channel[]>([]);
     const [members, setMembers] = createSignal<Member[]>([]);
@@ -58,11 +57,12 @@ export default function GuildPage() {
             navigate("/signin");
             return;
         }
-        // The token is persisted on the Rust side (via tauri-plugin-store) and
-        // restored automatically at startup — no set_token call needed here.
-
+        // The token is passed explicitly to init_websocket so the Rust backend
+        // has it in state for all subsequent commands (list_my_guilds, etc.).
+        // It is also persisted to the on-disk store so app restarts work without
+        // requiring another login.
         try {
-            await invoke("init_websocket");
+            await invoke("init_websocket", { token: session.token });
         } catch (e) {
             console.error("Failed to init WebSocket:", e);
         }
@@ -156,11 +156,24 @@ export default function GuildPage() {
         }
     };
 
+    const refreshGuilds = async () => {
+        try {
+            const data: Guild[] = await invoke("list_my_guilds");
+            setGuilds(data);
+            if (data.length > 0 && !data.find(g => g.id === activeGuild())) {
+                setActiveGuild(data[0].id);
+            }
+        } catch (e) {
+            console.error("Failed to refresh guilds:", e);
+        }
+    };
+
     return (<div class="flex h-screen bg-base text-text overflow-hidden">
         <GuildSidebar
             guilds={guilds()}
             activeGuild={activeGuild() ?? 0}
             onSelect={selectGuild}
+            onGuildCreated={refreshGuilds}
         />
 
         <div class="hidden md:block shrink-0">
